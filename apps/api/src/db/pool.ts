@@ -35,14 +35,21 @@ function formatQuery(text: string, params: any[]): string {
   return formatted;
 }
 
+import { supabaseAdmin } from '../lib/supabase.js';
+
 /** Query tipada de conveniência. */
 export async function query<T = any>(text: string, params: any[] = []): Promise<T[]> {
   if (isProd) {
     const sql = params.length > 0 ? formatQuery(text, params) : text;
-    // Omitir o array de parâmetros força o "Simple Query Protocol" no pg,
-    // que é suportado pelo pooler transacional (PgBouncer/Supavisor).
-    const res = await pool.query(sql);
-    return res.rows as T[];
+    // No Render não há suporte para IPv6 outbound (ENETUNREACH), e não conseguimos
+    // usar o pooler IPv4. Portanto, enviamos a query formatada via REST API do Supabase!
+    const { data, error } = await supabaseAdmin.rpc('execute_sql', { q: sql });
+    if (error) {
+      console.error('[db] falha ao executar query via rpc', error);
+      throw error;
+    }
+    // A RPC retorna JSON. O driver pg retornaria res.rows.
+    return (data as unknown as T[]) || [];
   }
   const res = await pool.query(text, params);
   return res.rows as T[];
