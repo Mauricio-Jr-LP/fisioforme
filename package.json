@@ -1,0 +1,26 @@
+{
+  "name": "fisioforme",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Sistema de gestão para clínica de fisioterapia (pacientes, tratamentos, agendamento e portal do paciente)",
+  "workspaces": [
+    "packages/*",
+    "apps/*"
+  ],
+  "scripts": {
+    "dev": "concurrently -n api,web -c blue,green \"npm run dev -w @fisioforme/api\" \"npm run dev -w @fisioforme/web\"",
+    "dev:api": "npm run dev -w @fisioforme/api",
+    "dev:web": "npm run dev -w @fisioforme/web",
+    "build": "npm run build -w @fisioforme/shared && npm run build -w @fisioforme/api && npm run build -w @fisioforme/web",
+    "build:api": "npm run build -w @fisioforme/shared && npm run build -w @fisioforme/api",
+    "build:web": "npm run build -w @fisioforme/shared && npm run build -w @fisioforme/web",
+    "start:api": "npm run start -w @fisioforme/api",
+    "typecheck": "npm run typecheck --workspaces --if-present"
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.2"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

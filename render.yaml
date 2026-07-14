@@ -1,0 +1,56 @@
+# ═══════════════════════════════════════════════════════════════
+# FisioForme — Blueprint do Render (backend + frontend)
+# Importe em: Render Dashboard > New > Blueprint (aponte para o repo)
+# Preencha as variáveis marcadas como sync:false no painel.
+# ═══════════════════════════════════════════════════════════════
+services:
+  # ── Backend (API Node/Express) ─────────────────────────────
+  - type: web
+    name: fisioforme-api
+    runtime: node
+    plan: free
+    buildCommand: npm install
+    startCommand: npm run start -w @fisioforme/api
+    healthCheckPath: /health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 4000
+      - key: DATABASE_URL
+        sync: false
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_ANON_KEY
+        sync: false
+      - key: SUPABASE_SERVICE_ROLE_KEY
+        sync: false
+      - key: STORAGE_BUCKET
+        value: attachments
+      - key: CLINIC_TZ
+        value: America/Sao_Paulo
+      # URL do frontend (após criar o static site, cole aqui)
+      - key: WEB_ORIGIN
+        sync: false
+
+  # ── Frontend (Static Site Vite/React) ──────────────────────
+  - type: web
+    name: fisioforme-web
+    runtime: static
+    buildCommand: npm install && npm run build:web
+    staticPublishPath: apps/web/dist
+    # SPA: qualquer rota cai no index.html
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /index.html
+    envVars:
+      - key: VITE_SUPABASE_URL
+        sync: false
+      - key: VITE_SUPABASE_ANON_KEY
+        sync: false
+      # URL pública da API (após criar o serviço acima)
+      - key: VITE_API_URL
+        sync: false
+      - key: VITE_STORAGE_BUCKET
+        value: attachments
