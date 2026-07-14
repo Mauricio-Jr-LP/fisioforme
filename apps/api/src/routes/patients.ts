@@ -52,15 +52,23 @@ patientsRouter.get('/', asyncHandler(async (req, res) => {
 patientsRouter.get('/:id', asyncHandler(async (req, res) => {
   const patient = await queryOne('select * from patients where id = $1', [req.params.id]);
   if (!patient) throw notFound('Paciente não encontrado');
-  const [treatments, consultations, notes, appointments] = await Promise.all([
+  const [treatments, consultations, notes, appointments, attachments] = await Promise.all([
     query('select * from treatments where patient_id = $1 order by created_at desc', [req.params.id]),
     query('select * from consultations where patient_id = $1 order by date desc, created_at desc', [req.params.id]),
     query('select n.*, p.full_name as author_name from patient_notes n left join profiles p on p.id = n.author_id where n.patient_id = $1 order by n.created_at desc', [req.params.id]),
     query(`select a.*, s.name as service_name, s.color as service_color
              from appointments a left join service_types s on s.id = a.service_type_id
              where a.patient_id = $1 order by a.start_time desc limit 50`, [req.params.id]),
+    query("select * from attachments where entity_type = 'patient' and entity_id = $1 order by created_at desc", [req.params.id])
   ]);
-  res.json({ ...patient, treatments, consultations, notes, appointments });
+  
+  // assinar urls
+  const { signedUrl } = await import('../lib/supabase.js');
+  for (const a of attachments) {
+    a.file_url = await signedUrl(a.file_path);
+  }
+
+  res.json({ ...patient, treatments, consultations, notes, appointments, attachments });
 }));
 
 // POST /patients

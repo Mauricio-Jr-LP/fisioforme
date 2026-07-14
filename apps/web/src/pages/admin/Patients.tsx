@@ -43,22 +43,24 @@ export default function Patients() {
             <>
               {/* Desktop table */}
               <Show above="md">
-                <Table>
-                  <Thead><Tr><Th>Nome</Th><Th>Contato</Th><Th>Idade</Th><Th>Cadastro</Th><Th>Status</Th></Tr></Thead>
-                  <Tbody>
-                    {data.map((p) => (
-                      <Tr key={p.id} cursor="pointer" _hover={{ bg: 'gray.50' }} onClick={() => navigate(`/app/pacientes/${p.id}`)}>
-                        <Td>
-                          <HStack><Avatar size="sm" name={p.full_name} bg="brand.500" color="white" /><Text fontWeight="medium">{p.full_name}</Text></HStack>
-                        </Td>
-                        <Td><Text fontSize="sm">{p.phone || '—'}</Text><Text fontSize="xs" color="gray.500">{p.email || ''}</Text></Td>
-                        <Td>{ageFrom(p.birth_date) || '—'}</Td>
-                        <Td>{fmtDate(p.created_at)}</Td>
-                        <Td>{p.active ? <Badge colorScheme="green">Ativo</Badge> : <Badge>Inativo</Badge>}</Td>
-                      </Tr>
-                    ))}
-                  </Tbody>
-                </Table>
+                <Box overflowX="auto">
+                  <Table>
+                    <Thead><Tr><Th>Nome</Th><Th>Contato</Th><Th>Idade</Th><Th>Cadastro</Th><Th>Status</Th></Tr></Thead>
+                    <Tbody>
+                      {data.map((p) => (
+                        <Tr key={p.id} cursor="pointer" _hover={{ bg: 'gray.50' }} onClick={() => navigate(`/app/pacientes/${p.id}`)}>
+                          <Td>
+                            <HStack><Avatar size="sm" name={p.full_name} bg="brand.500" color="white" /><Text fontWeight="medium">{p.full_name}</Text></HStack>
+                          </Td>
+                          <Td><Text fontSize="sm">{p.phone || '—'}</Text><Text fontSize="xs" color="gray.500">{p.email || ''}</Text></Td>
+                          <Td>{ageFrom(p.birth_date) || '—'}</Td>
+                          <Td>{fmtDate(p.created_at)}</Td>
+                          <Td>{p.active ? <Badge colorScheme="green">Ativo</Badge> : <Badge>Inativo</Badge>}</Td>
+                        </Tr>
+                      ))}
+                    </Tbody>
+                  </Table>
+                </Box>
               </Show>
               {/* Mobile cards */}
               <Show below="md">

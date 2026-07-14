@@ -76,17 +76,19 @@ export default function SettingsPage() {
         <Card>
           <CardBody>
             <Heading size="sm" mb={4}>Equipe</Heading>
-            <Table size="sm">
-              <Thead><Tr><Th>Nome</Th><Th>Papel</Th></Tr></Thead>
-              <Tbody>
-                {(staff || []).map((s) => (
-                  <Tr key={s.id}>
-                    <Td>{s.full_name || s.email}{s.id === profile?.id && <Badge ml={2} colorScheme="brand">você</Badge>}</Td>
-                    <Td><Badge colorScheme={s.role === 'admin' ? 'purple' : 'blue'}>{s.role}</Badge></Td>
-                  </Tr>
-                ))}
-              </Tbody>
-            </Table>
+            <Box overflowX="auto">
+              <Table size="sm">
+                <Thead><Tr><Th>Nome</Th><Th>Papel</Th></Tr></Thead>
+                <Tbody>
+                  {(staff || []).map((s) => (
+                    <Tr key={s.id}>
+                      <Td>{s.full_name || s.email}{s.id === profile?.id && <Badge ml={2} colorScheme="brand">você</Badge>}</Td>
+                      <Td><Badge colorScheme={s.role === 'admin' ? 'purple' : 'blue'}>{s.role}</Badge></Td>
+                    </Tr>
+                  ))}
+                </Tbody>
+              </Table>
+            </Box>
             <Divider my={4} />
             <Text fontSize="sm" color="gray.500">
               Para promover um usuário a fisioterapeuta/admin, atualize o campo <b>role</b> em <b>profiles</b> no
@@ -111,6 +113,37 @@ export default function SettingsPage() {
             </Stack>
           </CardBody>
         </Card>
+
+        {profile?.role === 'admin' && (
+          <Card>
+            <CardBody>
+              <Heading size="sm" mb={4}>Exportação de Dados</Heading>
+              <Text fontSize="sm" color="gray.500" mb={4}>
+                Baixe um arquivo JSON contendo todos os pacientes, tratamentos, evoluções e agendamentos.
+              </Text>
+              <Button 
+                onClick={async () => {
+                  try {
+                    const res = await api('/settings/backup', { method: 'GET' });
+                    const blob = new Blob([JSON.stringify(res, null, 2)], { type: 'application/json' });
+                    const url = window.URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = `backup-fisioforme-${Date.now()}.json`;
+                    a.click();
+                    window.URL.revokeObjectURL(url);
+                    toast({ status: 'success', title: 'Backup exportado com sucesso' });
+                  } catch (e: any) {
+                    toast({ status: 'error', title: 'Erro ao exportar backup', description: e.message });
+                  }
+                }}
+                colorScheme="purple"
+              >
+                Exportar Backup do Sistema
+              </Button>
+            </CardBody>
+          </Card>
+        )}
       </SimpleGrid>
     </Box>
   );

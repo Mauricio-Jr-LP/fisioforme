@@ -53,3 +53,29 @@ portalRouter.get('/treatments/:id', asyncHandler(async (req, res) => {
   const stages = await query('select * from treatment_stages where treatment_id = $1 order by order_index', [req.params.id]);
   res.json({ ...t, stages });
 }));
+
+// PUT /portal/appointments/:id/cancel
+portalRouter.put('/appointments/:id/cancel', asyncHandler(async (req, res) => {
+  const pid = patientId(req);
+  const appt = await queryOne('select * from appointments where id = $1 and patient_id = $2', [req.params.id, pid]);
+  if (!appt) throw notFound('Agendamento não encontrado');
+  if (appt.status === 'cancelled') throw forbidden('Agendamento já está cancelado');
+  if (appt.status === 'completed') throw forbidden('Não é possível cancelar um agendamento concluído');
+
+  // Validação de desmarque (24h de antecedência)
+  // Em um sistema real, poderíamos ler o tempo de antecedência das configurações (clinic_settings)
+  const settings = await queryOne("select value from clinic_settings where key = 'cancellation_notice_hours'");
+  const noticeHours = settings ? Number(settings.value) : 24;
+
+  const now = new Date();
+  const start = new Date(appt.start_time);
+  const diffHours = (start.getTime() - now.getTime()) / (1000 * 60 * 60);
+
+  if (diffHours < noticeHours) {
+    res.status(400).json({ error: `O cancelamento só é permitido com no mínimo ${noticeHours} horas de antecedência.` });
+    return;
+  }
+
+  await query("update appointments set status = 'cancelled' where id = $1", [req.params.id]);
+  res.json({ success: true });
+}));

@@ -1,5 +1,6 @@
 import { Routes, Route, Navigate } from 'react-router-dom';
-import { Center, Spinner } from '@chakra-ui/react';
+import { useState, useEffect } from 'react';
+import { Center, Spinner, VStack, Text, Progress, Box } from '@chakra-ui/react';
 import { useAuth } from './context/AuthContext';
 import { AdminLayout } from './components/AdminLayout';
 import { PortalLayout } from './components/PortalLayout';
@@ -21,9 +22,37 @@ import PortalHome from './pages/portal/PortalHome';
 import PortalConsultations from './pages/portal/PortalConsultations';
 
 function FullscreenSpinner() {
+  const [showProgress, setShowProgress] = useState(false);
+  const [progress, setProgress] = useState(0);
+
+  useEffect(() => {
+    // Se passar de 2 segundos, exibe a barra de progresso (indicando cold start do Render)
+    const timer = setTimeout(() => setShowProgress(true), 2000);
+    return () => clearTimeout(timer);
+  }, []);
+
+  useEffect(() => {
+    if (!showProgress) return;
+    // Barra de progresso preenche em 50 segundos (delay típico do Render)
+    const interval = setInterval(() => {
+      setProgress((p) => Math.min(p + (100 / 50), 99)); // não chega a 100% artificialmente
+    }, 1000);
+    return () => clearInterval(interval);
+  }, [showProgress]);
+
   return (
-    <Center h="100vh">
-      <Spinner size="xl" color="brand.500" thickness="4px" />
+    <Center h="100vh" bg="gray.50" _dark={{ bg: 'gray.900' }}>
+      <VStack spacing={6}>
+        <Spinner size="xl" color="brand.500" thickness="4px" />
+        {showProgress && (
+          <Box w="300px" textAlign="center">
+            <Text fontSize="sm" color="gray.500" mb={3}>
+              Acordando o servidor gratuito...<br/>Isso pode levar até 50 segundos.
+            </Text>
+            <Progress value={progress} size="xs" colorScheme="brand" borderRadius="full" isAnimated />
+          </Box>
+        )}
+      </VStack>
     </Center>
   );
 }

@@ -14,6 +14,7 @@ import type { Patient, Treatment, Consultation, PatientNote, Appointment } from 
 import { api } from '../../lib/api';
 import { uploadAttachment } from '../../lib/upload';
 import { Loading, TreatmentStatusBadge, AppointmentStatusBadge, EmptyState, WhatsAppLink } from '../../components/ui';
+import { WaiverTemplate } from '../../components/WaiverTemplate';
 import { fmtDate, fmtDateTime, ageFrom } from '../../lib/format';
 import { useAuth } from '../../context/AuthContext';
 
@@ -22,6 +23,7 @@ type FullPatient = Patient & {
   consultations: Consultation[];
   notes: (PatientNote & { author_name?: string })[];
   appointments: (Appointment & { service_name?: string; service_color?: string })[];
+  attachments?: any[];
 };
 
 export default function PatientDetail() {
@@ -89,6 +91,7 @@ export default function PatientDetail() {
             <Tab><Icon as={FiFileText} mr={2} />Prontuário</Tab>
             <Tab><Icon as={FiActivity} mr={2} />Tratamentos</Tab>
             <Tab><Icon as={FiMessageSquare} mr={2} />Evoluções</Tab>
+            <Tab><Icon as={FiFileText} mr={2} />Documentos</Tab>
             <Tab><Icon as={FiCalendar} mr={2} />Agenda</Tab>
           </TabList>
         </Box>
@@ -165,7 +168,7 @@ export default function PatientDetail() {
             )}
           </TabPanel>
 
-          {/* Evoluções */}
+            {/* Evoluções */}
           <TabPanel px={0}>
             <HStack mb={4}><Button leftIcon={<FiPlus />} onClick={consultDisc.onOpen}>Nova evolução</Button></HStack>
             {data.consultations.length === 0 ? (
@@ -175,6 +178,50 @@ export default function PatientDetail() {
                 {data.consultations.map((c) => <ConsultationCard key={c.id} consultation={c} patientId={data.id} onChange={() => qc.invalidateQueries({ queryKey: ['patient', id] })} />)}
               </Stack>
             )}
+          </TabPanel>
+
+          {/* Documentos */}
+          <TabPanel px={0}>
+            <Stack spacing={6}>
+              <Box>
+                <Heading size="sm" mb={3}>Gerar Termos</Heading>
+                <WaiverTemplate patient={data} />
+              </Box>
+              <Divider />
+              <Box>
+                <Heading size="sm" mb={3}>Documentos Anexados</Heading>
+                {(!data.attachments || data.attachments.length === 0) ? (
+                  <Text color="gray.400" fontSize="sm">Nenhum documento anexado.</Text>
+                ) : (
+                  <Wrap mb={4}>
+                    {data.attachments.map((a: any) => (
+                      <WrapItem key={a.id}>
+                        <Link href={a.file_url || '#'} isExternal>
+                          <Badge p={2} cursor="pointer" _hover={{ bg: 'gray.200' }}>
+                            <Icon as={FiFileText} mr={1} />
+                            {a.file_name}
+                          </Badge>
+                        </Link>
+                      </WrapItem>
+                    ))}
+                  </Wrap>
+                )}
+                <Button as="label" variant="outline" size="sm" leftIcon={<FiPlus />} cursor="pointer">
+                  Anexar arquivo
+                  <input type="file" hidden onChange={async (e) => {
+                    const file = e.target.files?.[0];
+                    if (!file) return;
+                    try {
+                      await uploadAttachment(file, 'patient', data.id);
+                      toast({ status: 'success', title: 'Arquivo anexado' });
+                      qc.invalidateQueries({ queryKey: ['patient', id] });
+                    } catch (err: any) {
+                      toast({ status: 'error', title: 'Erro', description: err.message });
+                    }
+                  }} />
+                </Button>
+              </Box>
+            </Stack>
           </TabPanel>
 
           {/* Agenda */}

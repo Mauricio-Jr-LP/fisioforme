@@ -1,10 +1,10 @@
 import { useState, type ReactNode } from 'react';
 import { Link as RouterLink } from 'react-router-dom';
 import {
-  Box, Card, CardBody, Heading, Text, Stack, HStack, Badge, Icon, SimpleGrid, Divider, Button, Alert, AlertIcon, FormControl, FormLabel, Input, useToast
+  Box, Card, CardBody, Heading, Text, Stack, HStack, Badge, Icon, SimpleGrid, Divider, Button, Alert, AlertIcon, FormControl, FormLabel, Input, useToast, IconButton, Tooltip, useDisclosure, Modal, ModalOverlay, ModalContent, ModalHeader, ModalBody, ModalFooter, ModalCloseButton
 } from '@chakra-ui/react';
-import { FiCalendar, FiActivity, FiPlus, FiUser } from 'react-icons/fi';
-import { useQuery } from '@tanstack/react-query';
+import { FiCalendar, FiActivity, FiPlus, FiUser, FiX } from 'react-icons/fi';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import type { Patient, Treatment, Appointment } from '@fisioforme/shared';
 import { api, ApiError } from '../../lib/api';
 import { supabase } from '../../lib/supabase';
@@ -14,14 +14,52 @@ import { useAuth } from '../../context/AuthContext';
 
 interface PortalMe { patient: Patient; treatments: Treatment[]; appointments: (Appointment & { service_type?: any })[] }
 
+function CancelAppointmentModal({ appointment, disc, onSaved }: { appointment: Appointment | null, disc: any, onSaved: () => void }) {
+  const toast = useToast();
+  const mut = useMutation({
+    mutationFn: () => api(`/portal/appointments/${appointment?.id}/cancel`, { method: 'PUT' }),
+    onSuccess: () => {
+      toast({ status: 'success', title: 'Agendamento cancelado' });
+      disc.onClose();
+      onSaved();
+    },
+    onError: (e: any) => toast({ status: 'error', title: 'Erro ao cancelar', description: e.message }),
+  });
+  if (!appointment) return null;
+  return (
+    <Modal isOpen={disc.isOpen} onClose={disc.onClose}>
+      <ModalOverlay />
+      <ModalContent>
+        <ModalHeader>Cancelar Agendamento</ModalHeader>
+        <ModalCloseButton />
+        <ModalBody>
+          <Text mb={4}>Tem certeza que deseja cancelar seu agendamento para <strong>{fmtDateTime(appointment.start_time)}</strong>?</Text>
+          <Alert status="warning" borderRadius="md">
+            <AlertIcon />
+            Lembre-se: cancelamentos só são permitidos com até 24 horas de antecedência.
+          </Alert>
+        </ModalBody>
+        <ModalFooter>
+          <Button variant="ghost" mr={3} onClick={disc.onClose}>Voltar</Button>
+          <Button colorScheme="red" isLoading={mut.isPending} onClick={() => mut.mutate()}>Cancelar Agendamento</Button>
+        </ModalFooter>
+      </ModalContent>
+    </Modal>
+  );
+}
+
 export default function PortalHome() {
   const toast = useToast();
+  const qc = useQueryClient();
   const { profile } = useAuth();
   const { data, isLoading, error, refetch } = useQuery({
     queryKey: ['portal-me'],
     queryFn: () => api<PortalMe>('/portal/me'),
     retry: false,
   });
+
+  const cancelDisc = useDisclosure();
+  const [selectedAppt, setSelectedAppt] = useState<Appointment | null>(null);
 
   if (isLoading) return <Loading />;
 
@@ -95,12 +133,17 @@ export default function PortalHome() {
                   <Box w="4px" h="36px" borderRadius="full" bg={a.service_type?.color || 'gray.300'} />
                   <Box flex="1"><Text fontWeight="medium">{a.service_type?.name || 'Consulta'}</Text><Text fontSize="sm" color="gray.500">{fmtDateTime(a.start_time)}</Text></Box>
                   <AppointmentStatusBadge status={a.status} />
+                  <Tooltip label="Cancelar agendamento">
+                    <IconButton aria-label="Cancelar" icon={<FiX />} size="sm" variant="ghost" colorScheme="red" onClick={() => { setSelectedAppt(a); cancelDisc.onOpen(); }} />
+                  </Tooltip>
                 </HStack>
               </CardBody></Card>
             ))}
           </Stack>
         )}
       </Box>
+
+      <CancelAppointmentModal appointment={selectedAppt} disc={cancelDisc} onSaved={() => qc.invalidateQueries({ queryKey: ['portal-me'] })} />
 
       <Box>
         <Heading size="sm" mb={3}><Icon as={FiActivity} mr={2} />Meus tratamentos</Heading>

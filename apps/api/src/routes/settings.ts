@@ -33,3 +33,21 @@ settingsRouter.put('/staff/:id/promote', requireAdmin, asyncHandler(async (req, 
   if (!row) throw notFound('Usuário não encontrado');
   res.json(row);
 }));
+
+settingsRouter.get('/backup', requireAdmin, asyncHandler(async (_req, res) => {
+  const [patients, treatments, consultations, appointments, services, settings] = await Promise.all([
+    query('select * from patients'),
+    query('select * from treatments'),
+    query('select * from consultations'),
+    query('select * from appointments'),
+    query('select * from service_types'),
+    query('select * from clinic_settings'),
+  ]);
+  const backupData = {
+    exportDate: new Date().toISOString(),
+    data: { patients, treatments, consultations, appointments, services, settings }
+  };
+  res.setHeader('Content-Type', 'application/json');
+  res.setHeader('Content-Disposition', `attachment; filename=backup-fisioforme-${Date.now()}.json`);
+  res.send(JSON.stringify(backupData, null, 2));
+}));

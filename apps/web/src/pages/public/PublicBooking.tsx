@@ -5,6 +5,7 @@ import {
   Stack, Text, useToast, Icon, Link, Divider,
 } from '@chakra-ui/react';
 import { FiCheckCircle, FiArrowLeft } from 'react-icons/fi';
+import { useQuery } from '@tanstack/react-query';
 import type { TimeSlot } from '@fisioforme/shared';
 import { SlotPicker } from '../../components/SlotPicker';
 import { api } from '../../lib/api';
@@ -20,6 +21,13 @@ export default function PublicBooking() {
   const [notes, setNotes] = useState('');
   const [busy, setBusy] = useState(false);
   const [done, setDone] = useState(false);
+
+  const { data: services } = useQuery({
+    queryKey: ['services', true],
+    queryFn: () => api<any[]>('/service-types', { auth: false }),
+  });
+  const selectedService = services?.find(s => s.id === serviceId);
+  const prepayValue = selectedService?.price ? selectedService.price * 0.3 : 0;
 
   const submit = async () => {
     if (!slot || !serviceId) { toast({ status: 'warning', title: 'Escolha um horário' }); return; }
@@ -39,7 +47,49 @@ export default function PublicBooking() {
     }
   };
 
+  // Puxar a chave pix das configurações
+  const { data: settingsArr } = useQuery({
+    queryKey: ['public-settings'],
+    queryFn: () => api<any[]>('/settings', { auth: false }).catch(() => []), // Falha silenciosa se rota não for pública
+  });
+  // Como não há rota pública de settings, vamos fixar uma mensagem genérica de chave por telefone por enquanto,
+  // O ideal seria criar um endpoint público para pegar a chave pix, mas usaremos o telefone do agendamento ou genérico
+  const pixKey = "CNPJ ou Telefone da Clínica (solicite via WhatsApp)";
+
   if (done) {
+    if (prepayValue > 0) {
+      return (
+        <Container maxW="520px" py={16} px={4}>
+          <Card>
+            <CardBody textAlign="center" py={10}>
+              <Icon as={FiCheckCircle} boxSize={14} color="green.400" mb={4} />
+              <Heading size="md" mb={2}>Agendamento Reservado!</Heading>
+              <Text color="gray.600" mb={6}>
+                Para confirmar seu agendamento para <b>{fmtDateTime(slot?.start)}</b>, é necessário realizar o pagamento de 30% do valor do serviço como sinal.
+              </Text>
+              
+              <Box bg="gray.50" p={4} borderRadius="md" mb={6} borderWidth={1}>
+                <Text fontSize="sm" color="gray.500" mb={1}>Valor do sinal (30%)</Text>
+                <Heading size="lg" color="brand.600" mb={4}>
+                  {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(prepayValue)}
+                </Heading>
+                
+                <FormControl mb={2}>
+                  <FormLabel fontSize="sm" textAlign="center">Chave Pix</FormLabel>
+                  <Input value={pixKey} isReadOnly textAlign="center" bg="white" />
+                </FormControl>
+                <Text fontSize="xs" color="gray.400">
+                  Transfira o valor acima e envie o comprovante para o nosso WhatsApp informando seu nome ({name}).
+                </Text>
+              </Box>
+
+              <Button as={RouterLink} to="/" variant="outline">Voltar ao início</Button>
+            </CardBody>
+          </Card>
+        </Container>
+      );
+    }
+
     return (
       <Container maxW="520px" py={16} px={4}>
         <Card>
