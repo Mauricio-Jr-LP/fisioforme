@@ -15,6 +15,8 @@ import { attachmentsRouter } from './routes/attachments.js';
 import { dashboardRouter } from './routes/dashboard.js';
 import { portalRouter } from './routes/portal.js';
 import { settingsRouter } from './routes/settings.js';
+import { dbHealthRouter } from './routes/dbHealth.js';
+import { dbErrorRouter } from './routes/dbError.js';
 
 const app = express();
 
@@ -33,8 +35,6 @@ app.use(express.json({ limit: '2mb' }));
 app.use(attachUser);
 
 app.get('/health', (_req, res) => res.json({ ok: true }));
-import { dbHealthRouter } from './routes/dbHealth.js';
-app.use('/api/db-health', dbHealthRouter);
 
 // Rotas
 app.use('/api/auth', authRouter);
@@ -49,6 +49,8 @@ app.use('/api/attachments', attachmentsRouter);
 app.use('/api/dashboard', dashboardRouter);
 app.use('/api/portal', portalRouter);
 app.use('/api/settings', settingsRouter);
+app.use('/api/db-health', dbHealthRouter);
+app.use('/api/db-error', dbErrorRouter);
 
 app.use((_req, res) => res.status(404).json({ error: 'Rota não encontrada' }));
 app.use(errorHandler);
