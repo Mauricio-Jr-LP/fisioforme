@@ -57,3 +57,4 @@ app.listen(env.port, () => {
   console.log(`🩺 FisioForme API rodando em http://localhost:${env.port} (${env.nodeEnv})`);
 });
 
+
