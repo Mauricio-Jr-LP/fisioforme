@@ -32,7 +32,9 @@ app.use(express.json({ limit: '2mb' }));
 // Popula req.user a partir do Bearer token (não bloqueia)
 app.use(attachUser);
 
-app.get('/health', (_req, res) => res.json({ ok: true, service: 'fisioforme-api', ts: new Date().toISOString() }));
+app.get('/health', (_req, res) => res.json({ ok: true }));
+import { dbHealthRouter } from './routes/dbHealth.js';
+app.use('/api/db-health', dbHealthRouter);
 
 // Rotas
 app.use('/api/auth', authRouter);
@@ -54,3 +56,4 @@ app.use(errorHandler);
 app.listen(env.port, () => {
   console.log(`🩺 FisioForme API rodando em http://localhost:${env.port} (${env.nodeEnv})`);
 });
+
