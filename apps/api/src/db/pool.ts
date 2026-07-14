@@ -37,8 +37,10 @@ function formatQuery(text: string, params: any[]): string {
 
 /** Query tipada de conveniência. */
 export async function query<T = any>(text: string, params: any[] = []): Promise<T[]> {
-  if (isProd && params.length > 0) {
-    const sql = formatQuery(text, params);
+  if (isProd) {
+    const sql = params.length > 0 ? formatQuery(text, params) : text;
+    // Omitir o array de parâmetros força o "Simple Query Protocol" no pg,
+    // que é suportado pelo pooler transacional (PgBouncer/Supavisor).
     const res = await pool.query(sql);
     return res.rows as T[];
   }
