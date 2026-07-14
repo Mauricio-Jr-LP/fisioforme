@@ -130,7 +130,7 @@ function StageModal({ treatmentId, disc, onSaved }: { treatmentId: string; disc:
   const mut = useMutation({
     mutationFn: () => api(`/treatments/${treatmentId}/stages`, {
       method: 'POST',
-      body: { title: form.title, description: form.description || null, target_sessions: form.target_sessions ? Number(form.target_sessions) : 0 },
+      body: { title: form.title, description: form.description || null, target_sessions: parseInt(form.target_sessions) || 0 },
     }),
     onSuccess: () => { toast({ status: 'success', title: 'Etapa adicionada' }); setForm({ title: '', description: '', target_sessions: '' }); disc.onClose(); onSaved(); },
     onError: (e: any) => toast({ status: 'error', title: 'Erro', description: e.message }),

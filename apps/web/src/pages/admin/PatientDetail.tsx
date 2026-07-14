@@ -7,14 +7,15 @@ import {
   Flex, IconButton, Link, Image, NumberInput, NumberInputField,
 } from '@chakra-ui/react';
 import {
-  FiArrowLeft, FiEdit2, FiPlus, FiActivity, FiFileText, FiMessageSquare, FiCalendar, FiTrash2, FiImage, FiSave,
+  FiArrowLeft, FiEdit2, FiPlus, FiActivity, FiFileText, FiMessageSquare, FiCalendar, FiTrash2, FiImage, FiSave, FiShield,
 } from 'react-icons/fi';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import type { Patient, Treatment, Consultation, PatientNote, Appointment } from '@fisioforme/shared';
 import { api } from '../../lib/api';
 import { uploadAttachment } from '../../lib/upload';
-import { Loading, TreatmentStatusBadge, AppointmentStatusBadge, EmptyState } from '../../components/ui';
+import { Loading, TreatmentStatusBadge, AppointmentStatusBadge, EmptyState, WhatsAppLink } from '../../components/ui';
 import { fmtDate, fmtDateTime, ageFrom } from '../../lib/format';
+import { useAuth } from '../../context/AuthContext';
 
 type FullPatient = Patient & {
   treatments: Treatment[];
@@ -34,10 +35,20 @@ export default function PatientDetail() {
     enabled: !!id,
   });
 
+  const { isStaff, profile } = useAuth();
+  const isAdmin = profile?.role === 'admin';
+
+  const promoteMut = useMutation({
+    mutationFn: () => api(`/settings/staff/${data?.profile_id}/promote`, { method: 'PUT' }),
+    onSuccess: () => { toast({ status: 'success', title: 'Usuário promovido a equipe' }); qc.invalidateQueries({ queryKey: ['patient', id] }); },
+    onError: (e: any) => toast({ status: 'error', title: 'Erro', description: e.message }),
+  });
+
   const editDisc = useDisclosure();
   const treatDisc = useDisclosure();
   const consultDisc = useDisclosure();
   const noteDisc = useDisclosure();
+  const toast = useToast();
 
   if (isLoading || !data) return <Loading />;
 
@@ -63,6 +74,11 @@ export default function PatientDetail() {
             <Button ml={{ md: 'auto' }} leftIcon={<FiEdit2 />} variant="outline" onClick={editDisc.onOpen} w={{ base: 'full', md: 'auto' }}>
               Editar dados
             </Button>
+            {isAdmin && data.profile_id && (
+              <Button leftIcon={<FiShield />} variant="ghost" colorScheme="purple" onClick={() => promoteMut.mutate()} isLoading={promoteMut.isPending}>
+                Tornar Equipe
+              </Button>
+            )}
           </Flex>
         </CardBody>
       </Card>
@@ -83,7 +99,7 @@ export default function PatientDetail() {
             <SimpleGrid columns={{ base: 1, lg: 2 }} spacing={4}>
               <InfoCard title="Dados pessoais">
                 <InfoRow label="E-mail" value={data.email} />
-                <InfoRow label="Telefone" value={data.phone} />
+                <InfoRow label="Telefone" value={<WhatsAppLink phone={data.phone} />} />
                 <InfoRow label="Nascimento" value={fmtDate(data.birth_date)} />
                 <InfoRow label="Documento" value={data.document} />
                 <InfoRow label="Endereço" value={data.address} />
@@ -193,17 +209,18 @@ export default function PatientDetail() {
 function InfoCard({ title, children }: { title: string; children: React.ReactNode }) {
   return <Card><CardBody><Heading size="sm" mb={3}>{title}</Heading><Stack spacing={2}>{children}</Stack></CardBody></Card>;
 }
-function InfoRow({ label, value }: { label: string; value?: string | null }) {
+function InfoRow({ label, value }: { label: string; value?: string | React.ReactNode | null }) {
   return (
     <HStack align="start" spacing={3}>
       <Text fontSize="sm" color="gray.500" minW="140px">{label}</Text>
-      <Text fontSize="sm" whiteSpace="pre-wrap">{value || '—'}</Text>
+      <Box fontSize="sm" whiteSpace="pre-wrap">{value || '—'}</Box>
     </HStack>
   );
 }
 
 function ConsultationCard({ consultation, patientId, onChange }: { consultation: Consultation; patientId: string; onChange: () => void }) {
   const toast = useToast();
+  const qc = useQueryClient();
   const { data: full } = useQuery({
     queryKey: ['consultation', consultation.id],
     queryFn: () => api<Consultation>(`/consultations/${consultation.id}`),
@@ -214,6 +231,7 @@ function ConsultationCard({ consultation, patientId, onChange }: { consultation:
     try {
       await uploadAttachment(file, 'consultation', consultation.id);
       toast({ status: 'success', title: 'Foto anexada' });
+      qc.invalidateQueries({ queryKey: ['consultation', consultation.id] });
       onChange();
     } catch (e: any) {
       toast({ status: 'error', title: 'Erro no upload', description: e.message });
@@ -250,8 +268,8 @@ function ConsultationCard({ consultation, patientId, onChange }: { consultation:
         )}
 
         <Button as="label" size="xs" mt={3} variant="outline" leftIcon={<FiImage />} cursor="pointer">
-          Anexar foto/arquivo
-          <input type="file" hidden onChange={(e) => e.target.files?.[0] && upload(e.target.files[0])} />
+          Anexar foto (Câmera/Arquivo)
+          <input type="file" hidden accept="image/*" capture="environment" onChange={(e) => e.target.files?.[0] && upload(e.target.files[0])} />
         </Button>
       </CardBody>
     </Card>
@@ -343,7 +361,7 @@ function NewConsultationModal({ patient, disc, onSaved }: { patient: FullPatient
       body: {
         patient_id: patient.id, date: form.date,
         treatment_id: form.treatment_id || null,
-        pain_level: form.pain_level === '' ? null : Number(form.pain_level),
+        pain_level: form.pain_level === '' ? null : (parseInt(form.pain_level) || 0),
         subjective: form.subjective || null, objective: form.objective || null,
         assessment: form.assessment || null, plan: form.plan || null,
       },

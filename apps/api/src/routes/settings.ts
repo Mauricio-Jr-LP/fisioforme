@@ -1,8 +1,8 @@
 import { Router } from 'express';
 import { z } from 'zod';
 import { query, queryOne } from '../db/pool.js';
-import { asyncHandler } from '../lib/http.js';
-import { requireStaff } from '../middleware/auth.js';
+import { asyncHandler, notFound } from '../lib/http.js';
+import { requireStaff, requireAdmin } from '../middleware/auth.js';
 
 export const settingsRouter = Router();
 
@@ -26,4 +26,10 @@ settingsRouter.put('/', requireStaff, asyncHandler(async (req, res) => {
 settingsRouter.get('/staff', requireStaff, asyncHandler(async (_req, res) => {
   const rows = await query("select id, full_name, role, email from profiles where role in ('admin','therapist') order by full_name");
   res.json(rows);
+}));
+
+settingsRouter.put('/staff/:id/promote', requireAdmin, asyncHandler(async (req, res) => {
+  const row = await queryOne(`update profiles set role = 'therapist' where id = $1 returning *`, [req.params.id]);
+  if (!row) throw notFound('Usuário não encontrado');
+  res.json(row);
 }));

@@ -1,18 +1,23 @@
+import { useState, type ReactNode } from 'react';
 import { Link as RouterLink } from 'react-router-dom';
 import {
-  Box, Card, CardBody, Heading, Text, Stack, HStack, Badge, Icon, SimpleGrid, Divider, Button, Alert, AlertIcon,
+  Box, Card, CardBody, Heading, Text, Stack, HStack, Badge, Icon, SimpleGrid, Divider, Button, Alert, AlertIcon, FormControl, FormLabel, Input, useToast
 } from '@chakra-ui/react';
-import { FiCalendar, FiActivity, FiPlus } from 'react-icons/fi';
+import { FiCalendar, FiActivity, FiPlus, FiUser } from 'react-icons/fi';
 import { useQuery } from '@tanstack/react-query';
 import type { Patient, Treatment, Appointment } from '@fisioforme/shared';
 import { api, ApiError } from '../../lib/api';
-import { Loading, AppointmentStatusBadge, TreatmentStatusBadge, EmptyState } from '../../components/ui';
+import { supabase } from '../../lib/supabase';
+import { Loading, AppointmentStatusBadge, TreatmentStatusBadge, EmptyState, WhatsAppLink } from '../../components/ui';
 import { fmtDate, fmtDateTime, ageFrom } from '../../lib/format';
+import { useAuth } from '../../context/AuthContext';
 
 interface PortalMe { patient: Patient; treatments: Treatment[]; appointments: (Appointment & { service_type?: any })[] }
 
 export default function PortalHome() {
-  const { data, isLoading, error } = useQuery({
+  const toast = useToast();
+  const { profile } = useAuth();
+  const { data, isLoading, error, refetch } = useQuery({
     queryKey: ['portal-me'],
     queryFn: () => api<PortalMe>('/portal/me'),
     retry: false,
@@ -38,6 +43,29 @@ export default function PortalHome() {
   const { patient, treatments, appointments } = data;
   const upcoming = appointments.filter((a) => new Date(a.start_time) >= new Date() && a.status !== 'cancelled');
 
+  const [profileForm, setProfileForm] = useState({ full_name: profile?.full_name || '', password: '' });
+  const [isSaving, setIsSaving] = useState(false);
+
+  const handleSaveProfile = async () => {
+    setIsSaving(true);
+    try {
+      if (profileForm.full_name !== profile?.full_name) {
+        await api('/auth/me', { method: 'PUT', body: { full_name: profileForm.full_name } });
+      }
+      if (profileForm.password) {
+        const { error } = await supabase.auth.updateUser({ password: profileForm.password });
+        if (error) throw error;
+      }
+      toast({ status: 'success', title: 'Perfil atualizado' });
+      setProfileForm(f => ({ ...f, password: '' }));
+      refetch();
+    } catch (e: any) {
+      toast({ status: 'error', title: 'Erro ao atualizar perfil', description: e.message });
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
   return (
     <Stack spacing={5}>
       <Card>
@@ -46,7 +74,7 @@ export default function PortalHome() {
           <Text color="gray.500">{ageFrom(patient.birth_date)}</Text>
           <Divider my={3} />
           <SimpleGrid columns={{ base: 1, sm: 2 }} spacing={2}>
-            <Info label="Telefone" value={patient.phone} />
+            <Info label="Telefone" value={<WhatsAppLink phone={patient.phone} />} />
             <Info label="E-mail" value={patient.email} />
             <Info label="Queixa principal" value={patient.main_complaint} />
             <Info label="Alergias" value={patient.allergies} />
@@ -90,10 +118,29 @@ export default function PortalHome() {
           </Stack>
         )}
       </Box>
+
+      <Box>
+        <Heading size="sm" mb={3}><Icon as={FiUser} mr={2} />Meu Perfil</Heading>
+        <Card>
+          <CardBody>
+            <Stack spacing={4} maxW="400px">
+              <FormControl>
+                <FormLabel>Nome Completo</FormLabel>
+                <Input value={profileForm.full_name} onChange={(e) => setProfileForm(f => ({ ...f, full_name: e.target.value }))} />
+              </FormControl>
+              <FormControl>
+                <FormLabel>Nova Senha</FormLabel>
+                <Input type="password" value={profileForm.password} onChange={(e) => setProfileForm(f => ({ ...f, password: e.target.value }))} placeholder="Deixe em branco para manter" />
+              </FormControl>
+              <Button onClick={handleSaveProfile} isLoading={isSaving} isDisabled={!profileForm.full_name} w="fit-content">Salvar Perfil</Button>
+            </Stack>
+          </CardBody>
+        </Card>
+      </Box>
     </Stack>
   );
 }
 
-function Info({ label, value }: { label: string; value?: string | null }) {
-  return <HStack align="start"><Text fontSize="sm" color="gray.500" minW="120px">{label}</Text><Text fontSize="sm">{value || '—'}</Text></HStack>;
+function Info({ label, value }: { label: string; value?: string | ReactNode | null }) {
+  return <HStack align="start"><Text fontSize="sm" color="gray.500" minW="120px">{label}</Text><Box fontSize="sm">{value || '—'}</Box></HStack>;
 }

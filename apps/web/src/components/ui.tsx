@@ -1,7 +1,8 @@
 import type { ReactNode } from 'react';
 import {
-  Box, Flex, Heading, Text, HStack, Icon, Badge, Card, CardBody, Center, Spinner,
+  Box, Flex, Heading, Text, HStack, Icon, Badge, Card, CardBody, Center, Spinner, Link
 } from '@chakra-ui/react';
+import { FiMessageCircle } from 'react-icons/fi';
 import type { IconType } from 'react-icons';
 import {
   APPOINTMENT_STATUS_LABELS, TREATMENT_STATUS_LABELS, STAGE_STATUS_LABELS,
@@ -67,4 +68,15 @@ export function TreatmentStatusBadge({ status }: { status: keyof typeof TREATMEN
 const STAGE_COLORS: Record<string, string> = { pending: 'gray', in_progress: 'blue', completed: 'green', skipped: 'orange' };
 export function StageStatusBadge({ status }: { status: keyof typeof STAGE_STATUS_LABELS }) {
   return <Badge colorScheme={STAGE_COLORS[status] || 'gray'} borderRadius="full" px={2}>{STAGE_STATUS_LABELS[status]}</Badge>;
+}
+
+export function WhatsAppLink({ phone }: { phone?: string | null }) {
+  if (!phone) return <Text color="gray.400">—</Text>;
+  const clean = phone.replace(/\D/g, '');
+  if (clean.length < 10) return <Text>{phone}</Text>;
+  return (
+    <Link href={`https://wa.me/55${clean}`} isExternal color="brand.500" display="inline-flex" alignItems="center">
+      {phone} <Icon as={FiMessageCircle} ml={1} />
+    </Link>
+  );
 }

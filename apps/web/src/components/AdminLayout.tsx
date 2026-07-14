@@ -2,9 +2,10 @@ import { Outlet, NavLink, useNavigate } from 'react-router-dom';
 import {
   Box, Flex, HStack, VStack, Icon, Text, IconButton, Drawer, DrawerBody, DrawerContent,
   DrawerOverlay, useDisclosure, Avatar, Menu, MenuButton, MenuList, MenuItem, Spacer, useBreakpointValue,
+  Image, useColorMode, useColorModeValue
 } from '@chakra-ui/react';
 import {
-  FiHome, FiUsers, FiCalendar, FiClock, FiActivity, FiSettings, FiMenu, FiLogOut, FiChevronDown,
+  FiHome, FiUsers, FiCalendar, FiClock, FiActivity, FiSettings, FiMenu, FiLogOut, FiChevronDown, FiSun, FiMoon
 } from 'react-icons/fi';
 import type { IconType } from 'react-icons';
 import { useAuth } from '../context/AuthContext';
@@ -43,12 +44,23 @@ function NavItems({ onNavigate }: { onNavigate?: () => void }) {
   );
 }
 
+function ColorModeSwitcher() {
+  const { colorMode, toggleColorMode } = useColorMode();
+  return (
+    <IconButton
+      aria-label="Alternar tema"
+      icon={<Icon as={colorMode === 'dark' ? FiSun : FiMoon} />}
+      onClick={toggleColorMode}
+      variant="ghost"
+      mr={2}
+    />
+  );
+}
+
 function Brand() {
   return (
     <HStack px={4} py={2} spacing={3}>
-      <Flex boxSize={9} bg="brand.500" color="white" borderRadius="lg" align="center" justify="center" fontWeight="bold">
-        F
-      </Flex>
+      <Image src="/logo.webp" boxSize="40px" objectFit="contain" />
       <Box>
         <Text fontWeight="bold" lineHeight="1.1">FisioForme</Text>
         <Text fontSize="xs" color="gray.500">Gestão da clínica</Text>
@@ -69,10 +81,10 @@ export function AdminLayout() {
   };
 
   return (
-    <Flex minH="100vh" bg="gray.50">
+    <Flex minH="100vh" bg={useColorModeValue('gray.50', 'gray.900')}>
       {/* Sidebar desktop */}
       {isDesktop && (
-        <Box as="nav" w="260px" bg="white" borderRight="1px solid" borderColor="gray.200" position="fixed" h="100vh" py={4}>
+        <Box as="nav" w="260px" bg={useColorModeValue('white', 'gray.800')} borderRight="1px solid" borderColor={useColorModeValue('gray.200', 'gray.700')} position="fixed" h="100vh" py={4}>
           <Brand />
           <Box mt={6} px={2}><NavItems /></Box>
         </Box>
@@ -91,12 +103,13 @@ export function AdminLayout() {
 
       <Box flex="1" ml={{ base: 0, lg: '260px' }}>
         {/* Topbar */}
-        <Flex as="header" bg="white" borderBottom="1px solid" borderColor="gray.200" px={4} py={3} align="center" position="sticky" top={0} zIndex={10}>
+        <Flex as="header" bg={useColorModeValue('white', 'gray.800')} borderBottom="1px solid" borderColor={useColorModeValue('gray.200', 'gray.700')} px={4} py={3} align="center" position="sticky" top={0} zIndex={10}>
           {!isDesktop && (
             <IconButton aria-label="Menu" icon={<FiMenu />} variant="ghost" onClick={onOpen} mr={2} />
           )}
           {!isDesktop && <Text fontWeight="bold">FisioForme</Text>}
           <Spacer />
+          <ColorModeSwitcher />
           <Menu>
             <MenuButton>
               <HStack spacing={2}>

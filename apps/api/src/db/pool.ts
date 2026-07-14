@@ -40,7 +40,14 @@ import { supabaseAdmin } from '../lib/supabase.js';
 /** Query tipada de conveniência. */
 export async function query<T = any>(text: string, params: any[] = []): Promise<T[]> {
   if (isProd) {
-    const sql = params.length > 0 ? formatQuery(text, params) : text;
+    let sql = params.length > 0 ? formatQuery(text, params) : text;
+    // O backend Supabase RPC execute_sql envelopa a query num SELECT ... FROM (q) t.
+    // Isso causa erro de sintaxe se a query for INSERT/UPDATE/DELETE e contiver RETURNING.
+    // Como o frontend atual invalida as queries do react-query e não depende dos IDs
+    // retornados pelo POST/PUT, podemos remover a cláusula RETURNING de forma segura
+    // para viabilizar as inserções no ambiente de produção.
+    sql = sql.replace(/\breturning\s+\*/i, '');
+    
     // No Render não há suporte para IPv6 outbound (ENETUNREACH), e não conseguimos
     // usar o pooler IPv4. Portanto, enviamos a query formatada via REST API do Supabase!
     const { data, error } = await supabaseAdmin.rpc('execute_sql', { q: sql });

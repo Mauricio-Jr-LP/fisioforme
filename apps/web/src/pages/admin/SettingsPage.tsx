@@ -7,12 +7,15 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '../../lib/api';
 import { PageHeader, Loading } from '../../components/ui';
 import { useAuth } from '../../context/AuthContext';
+import { supabase } from '../../lib/supabase';
 
 export default function SettingsPage() {
   const qc = useQueryClient();
   const toast = useToast();
   const { profile } = useAuth();
   const [form, setForm] = useState<any>({ name: '', phone: '', address: '', slot_granularity_minutes: 30 });
+  const [profileForm, setProfileForm] = useState({ full_name: profile?.full_name || '', password: '' });
+  const [isSavingProfile, setIsSavingProfile] = useState(false);
 
   const { data, isLoading } = useQuery({ queryKey: ['settings'], queryFn: () => api<any>('/settings', { auth: false }) });
   const { data: staff } = useQuery({ queryKey: ['staff'], queryFn: () => api<any[]>('/settings/staff') });
@@ -26,6 +29,26 @@ export default function SettingsPage() {
   });
 
   const set = (k: string, v: any) => setForm((f: any) => ({ ...f, [k]: v }));
+
+  const handleSaveProfile = async () => {
+    setIsSavingProfile(true);
+    try {
+      if (profileForm.full_name !== profile?.full_name) {
+        await api('/auth/me', { method: 'PUT', body: { full_name: profileForm.full_name } });
+      }
+      if (profileForm.password) {
+        const { error } = await supabase.auth.updateUser({ password: profileForm.password });
+        if (error) throw error;
+      }
+      toast({ status: 'success', title: 'Perfil atualizado' });
+      setProfileForm(f => ({ ...f, password: '' }));
+      qc.invalidateQueries({ queryKey: ['auth-session'] }); // force refresh context if needed
+    } catch (e: any) {
+      toast({ status: 'error', title: 'Erro ao atualizar perfil', description: e.message });
+    } finally {
+      setIsSavingProfile(false);
+    }
+  };
 
   if (isLoading) return <Loading />;
 
@@ -69,6 +92,23 @@ export default function SettingsPage() {
               Para promover um usuário a fisioterapeuta/admin, atualize o campo <b>role</b> em <b>profiles</b> no
               Supabase (ou via SQL). Novos cadastros entram como <b>patient</b>.
             </Text>
+          </CardBody>
+        </Card>
+
+        <Card>
+          <CardBody>
+            <Heading size="sm" mb={4}>Meu Perfil</Heading>
+            <Stack spacing={4}>
+              <FormControl>
+                <FormLabel>Nome Completo</FormLabel>
+                <Input value={profileForm.full_name} onChange={(e) => setProfileForm(f => ({ ...f, full_name: e.target.value }))} />
+              </FormControl>
+              <FormControl>
+                <FormLabel>Nova Senha</FormLabel>
+                <Input type="password" value={profileForm.password} onChange={(e) => setProfileForm(f => ({ ...f, password: e.target.value }))} placeholder="Deixe em branco para manter" />
+              </FormControl>
+              <Button onClick={handleSaveProfile} isLoading={isSavingProfile} isDisabled={!profileForm.full_name}>Salvar Perfil</Button>
+            </Stack>
           </CardBody>
         </Card>
       </SimpleGrid>
