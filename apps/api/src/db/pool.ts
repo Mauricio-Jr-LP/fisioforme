@@ -15,8 +15,33 @@ pool.on('error', (err) => {
   console.error('[db] erro inesperado no pool', err);
 });
 
+function escapeParam(val: any): string {
+  if (val === null || val === undefined) return 'NULL';
+  if (typeof val === 'number') return val.toString();
+  if (typeof val === 'boolean') return val ? 'TRUE' : 'FALSE';
+  if (val instanceof Date) return "'" + val.toISOString() + "'";
+  if (Array.isArray(val)) return "'" + JSON.stringify(val).replace(/'/g, "''") + "'";
+  if (typeof val === 'object') return "'" + JSON.stringify(val).replace(/'/g, "''") + "'";
+  return "'" + String(val).replace(/'/g, "''") + "'";
+}
+
+function formatQuery(text: string, params: any[]): string {
+  let formatted = text;
+  for (let i = params.length - 1; i >= 0; i--) {
+    const val = escapeParam(params[i]);
+    const regex = new RegExp(`\\$${i + 1}(?!\\d)`, 'g');
+    formatted = formatted.replace(regex, val);
+  }
+  return formatted;
+}
+
 /** Query tipada de conveniência. */
 export async function query<T = any>(text: string, params: any[] = []): Promise<T[]> {
+  if (isProd && params.length > 0) {
+    const sql = formatQuery(text, params);
+    const res = await pool.query(sql);
+    return res.rows as T[];
+  }
   const res = await pool.query(text, params);
   return res.rows as T[];
 }
