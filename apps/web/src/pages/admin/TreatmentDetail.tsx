@@ -59,7 +59,8 @@ export default function TreatmentDetail() {
           <Flex direction={{ base: 'column', md: 'row' }} gap={3} align={{ md: 'center' }}>
             <Box>
               <HStack><Heading size="md">{data.title}</Heading><TreatmentStatusBadge status={data.status} /></HStack>
-              {data.diagnosis && <Text color="gray.500">{data.diagnosis}</Text>}
+              {data.treatment_type && <Badge colorScheme="purple" mt={2}>{data.treatment_type}</Badge>}
+              {data.diagnosis && <Text color="gray.500" mt={2}>{data.diagnosis}</Text>}
               {data.description && <Text fontSize="sm" color="gray.600" mt={2}>{data.description}</Text>}
               <Text fontSize="xs" color="gray.400" mt={2}>Início: {fmtDate(data.start_date)} · Paciente: {data.patient?.full_name}</Text>
             </Box>
@@ -70,6 +71,49 @@ export default function TreatmentDetail() {
               <option value="completed">Concluído</option>
               <option value="cancelled">Cancelado</option>
             </Select>
+          </Flex>
+        </CardBody>
+      </Card>
+
+      {/* Controle Financeiro */}
+      <Card mb={4} borderLeft="4px solid" borderColor="green.400">
+        <CardBody>
+          <Flex direction={{ base: 'column', md: 'row' }} gap={6} align={{ md: 'center' }} justify="space-between">
+            <Box flex="1">
+              <Heading size="sm" mb={2}>Controle Financeiro do Pacote</Heading>
+              <HStack spacing={8} mt={3}>
+                <Box>
+                  <Text fontSize="xs" color="gray.500">Valor Total</Text>
+                  <Text fontWeight="bold" fontSize="lg">{new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(data.price || 0)}</Text>
+                </Box>
+                <Box>
+                  <Text fontSize="xs" color="gray.500">Valor Pago</Text>
+                  <Text fontWeight="bold" fontSize="lg" color="green.600">{new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(data.amount_paid || 0)}</Text>
+                </Box>
+                <Box>
+                  <Text fontSize="xs" color="gray.500">Restante</Text>
+                  <Text fontWeight="bold" fontSize="lg" color="red.500">{new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(Math.max(0, (data.price || 0) - (data.amount_paid || 0)))}</Text>
+                </Box>
+              </HStack>
+              <Box mt={4} maxW="400px">
+                <HStack justify="space-between" mb={1}>
+                  <Text fontSize="xs" color="gray.500">Progresso de pagamento</Text>
+                  <Text fontSize="xs" color="gray.500">{data.price > 0 ? Math.min(100, Math.round(((data.amount_paid || 0) / data.price) * 100)) : 0}%</Text>
+                </HStack>
+                <Progress value={data.price > 0 ? ((data.amount_paid || 0) / data.price) * 100 : 0} size="sm" colorScheme="green" borderRadius="full" />
+              </Box>
+            </Box>
+            <Box>
+              <Button leftIcon={<FiEdit2 />} colorScheme="green" variant="outline" size="sm" onClick={() => {
+                const add = prompt('Digite o valor pago adicional para registrar (ex: 150.00):');
+                if (add && !isNaN(parseFloat(add))) {
+                  const newTotal = (data.amount_paid || 0) + parseFloat(add);
+                  api(`/treatments/${data.id}`, { method: 'PUT', body: { amount_paid: newTotal } }).then(() => invalidate());
+                }
+              }}>
+                Registrar Pagamento
+              </Button>
+            </Box>
           </Flex>
         </CardBody>
       </Card>

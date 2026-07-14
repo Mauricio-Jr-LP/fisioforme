@@ -48,13 +48,12 @@ export default function PublicBooking() {
   };
 
   // Puxar a chave pix das configurações
-  const { data: settingsArr } = useQuery({
+  const { data: settings } = useQuery({
     queryKey: ['public-settings'],
-    queryFn: () => api<any[]>('/settings', { auth: false }).catch(() => []), // Falha silenciosa se rota não for pública
+    queryFn: () => api<any>('/settings', { auth: false }).catch(() => ({})), // Falha silenciosa se rota não for pública
   });
-  // Como não há rota pública de settings, vamos fixar uma mensagem genérica de chave por telefone por enquanto,
-  // O ideal seria criar um endpoint público para pegar a chave pix, mas usaremos o telefone do agendamento ou genérico
-  const pixKey = "CNPJ ou Telefone da Clínica (solicite via WhatsApp)";
+  
+  const pixKey = settings?.pix_key || "CNPJ ou Telefone da Clínica (solicite via WhatsApp)";
 
   if (done) {
     if (prepayValue > 0) {

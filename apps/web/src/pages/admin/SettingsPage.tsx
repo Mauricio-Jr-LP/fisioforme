@@ -63,6 +63,7 @@ export default function SettingsPage() {
               <FormControl><FormLabel>Nome</FormLabel><Input value={form.name || ''} onChange={(e) => set('name', e.target.value)} /></FormControl>
               <FormControl><FormLabel>Telefone</FormLabel><Input value={form.phone || ''} onChange={(e) => set('phone', e.target.value)} /></FormControl>
               <FormControl><FormLabel>Endereço</FormLabel><Input value={form.address || ''} onChange={(e) => set('address', e.target.value)} /></FormControl>
+              <FormControl><FormLabel>Chave PIX</FormLabel><Input value={form.pix_key || ''} onChange={(e) => set('pix_key', e.target.value)} placeholder="CNPJ, E-mail, Telefone ou Aleatória" /></FormControl>
               <FormControl>
                 <FormLabel>Granularidade dos horários (min)</FormLabel>
                 <NumberInput min={5} step={5} value={form.slot_granularity_minutes} onChange={(v) => set('slot_granularity_minutes', v)}><NumberInputField /></NumberInput>

@@ -374,20 +374,37 @@ function EditPatientModal({ patient, disc, onSaved }: { patient: Patient; disc: 
 
 function NewTreatmentModal({ patientId, disc, onSaved }: { patientId: string; disc: any; onSaved: (id: string) => void }) {
   const toast = useToast();
-  const [form, setForm] = useState<any>({ title: '', diagnosis: '', description: '', start_date: '' });
+  const [form, setForm] = useState<any>({ title: '', treatment_type: '', diagnosis: '', description: '', start_date: '', price: '', amount_paid: '' });
   const set = (k: string, v: any) => setForm((f: any) => ({ ...f, [k]: v }));
   const mut = useMutation({
-    mutationFn: () => api<Treatment>('/treatments', { method: 'POST', body: { patient_id: patientId, ...clean(form) } }),
+    mutationFn: () => api<Treatment>('/treatments', { 
+      method: 'POST', 
+      body: { 
+        patient_id: patientId, 
+        ...clean(form),
+        price: form.price ? parseFloat(form.price) : 0,
+        amount_paid: form.amount_paid ? parseFloat(form.amount_paid) : 0
+      } 
+    }),
     onSuccess: (t) => { toast({ status: 'success', title: 'Tratamento criado' }); disc.onClose(); onSaved(t.id); },
     onError: (e: any) => toast({ status: 'error', title: 'Erro', description: e.message }),
   });
   return (
     <Modal isOpen={disc.isOpen} onClose={disc.onClose} size="lg">
       <ModalOverlay /><ModalContent>
-        <ModalHeader>Novo tratamento</ModalHeader><ModalCloseButton />
+        <ModalHeader>Novo tratamento / Pacote</ModalHeader><ModalCloseButton />
         <ModalBody><Stack spacing={4}>
-          <FormControl isRequired><FormLabel>Título</FormLabel><Input value={form.title} onChange={(e) => set('title', e.target.value)} placeholder="Ex.: Reabilitação de ombro" /></FormControl>
+          <SimpleGrid columns={2} spacing={4}>
+            <FormControl isRequired><FormLabel>Título</FormLabel><Input value={form.title} onChange={(e) => set('title', e.target.value)} placeholder="Ex.: Reabilitação" /></FormControl>
+            <FormControl><FormLabel>Tipo</FormLabel><Input value={form.treatment_type} onChange={(e) => set('treatment_type', e.target.value)} placeholder="Ex.: Fisioterapia" /></FormControl>
+          </SimpleGrid>
           <FormControl><FormLabel>Diagnóstico</FormLabel><Input value={form.diagnosis} onChange={(e) => set('diagnosis', e.target.value)} /></FormControl>
+          
+          <SimpleGrid columns={2} spacing={4}>
+            <FormControl><FormLabel>Valor Total (R$)</FormLabel><Input type="number" step="0.01" value={form.price} onChange={(e) => set('price', e.target.value)} /></FormControl>
+            <FormControl><FormLabel>Valor já pago (R$)</FormLabel><Input type="number" step="0.01" value={form.amount_paid} onChange={(e) => set('amount_paid', e.target.value)} /></FormControl>
+          </SimpleGrid>
+
           <FormControl><FormLabel>Descrição</FormLabel><Textarea value={form.description} onChange={(e) => set('description', e.target.value)} /></FormControl>
           <FormControl><FormLabel>Data de início</FormLabel><Input type="date" value={form.start_date} onChange={(e) => set('start_date', e.target.value)} /></FormControl>
         </Stack></ModalBody>

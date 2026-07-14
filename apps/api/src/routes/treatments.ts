@@ -9,9 +9,12 @@ treatmentsRouter.use(requireStaff);
 
 const schema = z.object({
   patient_id: z.string().uuid(),
+  treatment_type: z.string().nullish(),
   title: z.string().min(1),
   description: z.string().nullish(),
   diagnosis: z.string().nullish(),
+  price: z.number().min(0).optional(),
+  amount_paid: z.number().min(0).optional(),
   status: z.enum(['active', 'paused', 'completed', 'cancelled']).optional(),
   start_date: z.string().nullish(),
   end_date: z.string().nullish(),
@@ -50,9 +53,12 @@ treatmentsRouter.get('/:id', asyncHandler(async (req, res) => {
 treatmentsRouter.post('/', asyncHandler(async (req, res) => {
   const d = schema.parse(req.body);
   const row = await queryOne(
-    `insert into treatments (patient_id, title, description, diagnosis, status, start_date, end_date)
-     values ($1,$2,$3,$4,$5,$6,$7) returning *`,
-    [d.patient_id, d.title, d.description ?? null, d.diagnosis ?? null, d.status ?? 'active', d.start_date ?? null, d.end_date ?? null]
+    `insert into treatments (patient_id, treatment_type, title, description, diagnosis, price, amount_paid, status, start_date, end_date)
+     values ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10) returning *`,
+    [
+      d.patient_id, d.treatment_type ?? null, d.title, d.description ?? null, d.diagnosis ?? null,
+      d.price ?? 0, d.amount_paid ?? 0, d.status ?? 'active', d.start_date ?? null, d.end_date ?? null
+    ]
   );
   res.status(201).json(row);
 }));

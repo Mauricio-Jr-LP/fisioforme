@@ -1,4 +1,4 @@
-import { Box, Heading, Text, VStack, Divider, Button } from '@chakra-ui/react';
+import { Box, Heading, Text, VStack, Divider, Button, Portal } from '@chakra-ui/react';
 import type { Patient } from '@fisioforme/shared';
 import { fmtDate } from '../lib/format';
 
@@ -13,25 +13,36 @@ export function WaiverTemplate({ patient }: { patient: Patient }) {
         Imprimir / Gerar PDF
       </Button>
 
-      <Box
-        className="print-section"
-        p={8}
-        bg="white"
-        color="black"
-        borderWidth={1}
-        borderRadius="md"
-        sx={{
-          '@media print': {
-            borderWidth: 0,
-            p: 0,
-            'body *': { display: 'none' },
-            '.print-section, .print-section *': { display: 'block' },
-            '.print-section': { position: 'absolute', left: 0, top: 0, width: '100%' }
+      <style>{`
+        @media print {
+          #root {
+            display: none !important;
           }
-        }}
-      >
-        <VStack spacing={6} align="stretch">
-          <Box textAlign="center">
+          html, body {
+            background-color: white !important;
+          }
+          #waiver-portal {
+            display: block !important;
+            background: white !important;
+            color: black !important;
+          }
+        }
+      `}</style>
+
+      <Portal>
+        <Box
+          id="waiver-portal"
+          display="none" // Hidden on screen, shown in print via CSS
+          p={8}
+          sx={{
+            '@media print': {
+              display: 'block !important',
+              position: 'static',
+            }
+          }}
+        >
+          <VStack spacing={6} align="stretch">
+            <Box textAlign="center">
             <Heading size="lg" mb={2}>TERMO DE CONSENTIMENTO LIVRE E ESCLARECIDO</Heading>
             <Text fontSize="sm" color="gray.600">Para Tratamento Fisioterapêutico</Text>
           </Box>
@@ -68,7 +79,8 @@ export function WaiverTemplate({ patient }: { patient: Patient }) {
             <Text mt={2}>_________________________, ____ de ________________ de 20___.</Text>
           </Box>
         </VStack>
-      </Box>
+        </Box>
+      </Portal>
     </Box>
   );
 }

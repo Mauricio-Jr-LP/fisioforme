@@ -149,9 +149,12 @@ export type TreatmentStatus = 'active' | 'paused' | 'completed' | 'cancelled';
 export interface Treatment {
   id: UUID;
   patient_id: UUID;
+  treatment_type: string | null;
   title: string;
   description: string | null;
   diagnosis: string | null;
+  price: number;
+  amount_paid: number;
   status: TreatmentStatus;
   start_date: ISODate | null;
   end_date: ISODate | null;
