@@ -2,16 +2,22 @@ import dotenv from 'dotenv';
 import { fileURLToPath } from 'node:url';
 import path from 'node:path';
 
-// Carrega .env da raiz do monorepo (../../.. relativo a este arquivo)
-const here = path.dirname(fileURLToPath(import.meta.url));
-dotenv.config({ path: path.resolve(here, '../../../../.env') });
-dotenv.config(); // fallback para .env local do app
+// Em desenvolvimento, carrega o .env da raiz do monorepo.
+// Em produção (Render), as variáveis já estão no process.env — dotenv não é necessário.
+if (process.env.NODE_ENV !== 'production') {
+  const here = path.dirname(fileURLToPath(import.meta.url));
+  dotenv.config({ path: path.resolve(here, '../../../../.env') });
+  dotenv.config(); // fallback para .env local do app
+}
 
 function required(name: string): string {
   const v = process.env[name];
   if (!v) {
-    // Não derruba o processo em dev, mas avisa alto.
-    console.warn(`[env] Variável obrigatória ausente: ${name}`);
+    const msg = `[env] Variável obrigatória ausente: ${name}`;
+    if (process.env.NODE_ENV === 'production') {
+      throw new Error(msg); // falha rápida em produção
+    }
+    console.warn(msg);
     return '';
   }
   return v;
