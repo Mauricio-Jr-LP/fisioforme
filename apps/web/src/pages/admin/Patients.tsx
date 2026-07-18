@@ -11,6 +11,7 @@ import type { Patient } from '@fisioforme/shared';
 import { api } from '../../lib/api';
 import { PageHeader, Loading, EmptyState } from '../../components/ui';
 import { fmtDate, ageFrom } from '../../lib/format';
+import { PageTransition } from '../../components/PageTransition';
 
 export default function Patients() {
   const [search, setSearch] = useState('');
@@ -23,71 +24,73 @@ export default function Patients() {
   });
 
   return (
-    <Box>
-      <PageHeader
-        title="Pacientes"
-        subtitle="Cadastro e prontuário dos pacientes"
-        action={<Button leftIcon={<FiPlus />} onClick={onOpen} w={{ base: 'full', md: 'auto' }}>Novo paciente</Button>}
-      />
+    <PageTransition>
+      <Box>
+        <PageHeader
+          title="Pacientes"
+          subtitle="Cadastro e prontuário dos pacientes"
+          action={<Button leftIcon={<FiPlus />} onClick={onOpen} w={{ base: 'full', md: 'auto' }}>Novo paciente</Button>}
+        />
 
-      <InputGroup mb={4} maxW="420px">
-        <InputLeftElement pointerEvents="none"><Icon as={FiSearch} color="gray.400" /></InputLeftElement>
-        <Input placeholder="Buscar por nome, telefone, e-mail ou documento" value={search} onChange={(e) => setSearch(e.target.value)} bg="white" />
-      </InputGroup>
+        <InputGroup mb={4} maxW="420px">
+          <InputLeftElement pointerEvents="none"><Icon as={FiSearch} color="gray.400" /></InputLeftElement>
+          <Input placeholder="Buscar por nome, telefone, e-mail ou documento" value={search} onChange={(e) => setSearch(e.target.value)} bg="white" _dark={{ bg: 'gray.800', borderColor: 'gray.700' }} />
+        </InputGroup>
 
-      <Card>
-        <CardBody p={{ base: 2, md: 0 }}>
-          {isLoading ? <Loading /> : !data || data.length === 0 ? (
-            <EmptyState icon={FiUserPlus} title="Nenhum paciente" description="Cadastre o primeiro paciente." action={<Button leftIcon={<FiPlus />} onClick={onOpen}>Novo paciente</Button>} />
-          ) : (
-            <>
-              {/* Desktop table */}
-              <Show above="md">
-                <Box overflowX="auto">
-                  <Table>
-                    <Thead><Tr><Th>Nome</Th><Th>Contato</Th><Th>Idade</Th><Th>Cadastro</Th><Th>Status</Th></Tr></Thead>
-                    <Tbody>
-                      {data.map((p) => (
-                        <Tr key={p.id} cursor="pointer" _hover={{ bg: 'gray.50' }} onClick={() => navigate(`/app/pacientes/${p.id}`)}>
-                          <Td>
-                            <HStack><Avatar size="sm" name={p.full_name} bg="brand.500" color="white" /><Text fontWeight="medium">{p.full_name}</Text></HStack>
-                          </Td>
-                          <Td><Text fontSize="sm">{p.phone || '—'}</Text><Text fontSize="xs" color="gray.500">{p.email || ''}</Text></Td>
-                          <Td>{ageFrom(p.birth_date) || '—'}</Td>
-                          <Td>{fmtDate(p.created_at)}</Td>
-                          <Td>{p.active ? <Badge colorScheme="green">Ativo</Badge> : <Badge>Inativo</Badge>}</Td>
-                        </Tr>
-                      ))}
-                    </Tbody>
-                  </Table>
-                </Box>
-              </Show>
-              {/* Mobile cards */}
-              <Show below="md">
-                <VStack align="stretch" spacing={2} p={2}>
-                  {data.map((p) => (
-                    <Card key={p.id} variant="outline" cursor="pointer" onClick={() => navigate(`/app/pacientes/${p.id}`)}>
-                      <CardBody py={3}>
-                        <HStack>
-                          <Avatar size="sm" name={p.full_name} bg="brand.500" color="white" />
-                          <Box flex="1" minW={0}>
-                            <Text fontWeight="medium" noOfLines={1}>{p.full_name}</Text>
-                            <Text fontSize="sm" color="gray.500">{p.phone || p.email || '—'}</Text>
-                          </Box>
-                          {p.active ? <Badge colorScheme="green">Ativo</Badge> : <Badge>Inativo</Badge>}
-                        </HStack>
-                      </CardBody>
-                    </Card>
-                  ))}
-                </VStack>
-              </Show>
-            </>
-          )}
-        </CardBody>
-      </Card>
+        <Card>
+          <CardBody p={{ base: 2, md: 0 }}>
+            {isLoading ? <Loading /> : !data || data.length === 0 ? (
+              <EmptyState icon={FiUserPlus} title="Nenhum paciente" description="Cadastre o primeiro paciente." action={<Button leftIcon={<FiPlus />} onClick={onOpen}>Novo paciente</Button>} />
+            ) : (
+              <>
+                {/* Desktop table */}
+                <Show above="md">
+                  <Box overflowX="auto">
+                    <Table>
+                      <Thead><Tr><Th>Nome</Th><Th>Contato</Th><Th>Idade</Th><Th>Cadastro</Th><Th>Status</Th></Tr></Thead>
+                      <Tbody>
+                        {data.map((p) => (
+                          <Tr key={p.id} cursor="pointer" _hover={{ bg: 'gray.50' }} onClick={() => navigate(`/app/pacientes/${p.id}`)}>
+                            <Td>
+                              <HStack><Avatar size="sm" name={p.full_name} bg="brand.500" color="white" /><Text fontWeight="medium">{p.full_name}</Text></HStack>
+                            </Td>
+                            <Td><Text fontSize="sm">{p.phone || '—'}</Text><Text fontSize="xs" color="gray.500">{p.email || ''}</Text></Td>
+                            <Td>{ageFrom(p.birth_date) || '—'}</Td>
+                            <Td>{fmtDate(p.created_at)}</Td>
+                            <Td>{p.active ? <Badge colorScheme="green">Ativo</Badge> : <Badge>Inativo</Badge>}</Td>
+                          </Tr>
+                        ))}
+                      </Tbody>
+                    </Table>
+                  </Box>
+                </Show>
+                {/* Mobile cards */}
+                <Show below="md">
+                  <VStack align="stretch" spacing={2} p={2}>
+                    {data.map((p) => (
+                      <Card key={p.id} variant="outline" cursor="pointer" onClick={() => navigate(`/app/pacientes/${p.id}`)}>
+                        <CardBody py={3}>
+                          <HStack>
+                            <Avatar size="sm" name={p.full_name} bg="brand.500" color="white" />
+                            <Box flex="1" minW={0}>
+                              <Text fontWeight="medium" noOfLines={1}>{p.full_name}</Text>
+                              <Text fontSize="sm" color="gray.500">{p.phone || p.email || '—'}</Text>
+                            </Box>
+                            {p.active ? <Badge colorScheme="green">Ativo</Badge> : <Badge>Inativo</Badge>}
+                          </HStack>
+                        </CardBody>
+                      </Card>
+                    ))}
+                  </VStack>
+                </Show>
+              </>
+            )}
+          </CardBody>
+        </Card>
 
-      <PatientModal isOpen={isOpen} onClose={onClose} />
-    </Box>
+        <PatientModal isOpen={isOpen} onClose={onClose} />
+      </Box>
+    </PageTransition>
   );
 }
 

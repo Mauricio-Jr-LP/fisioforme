@@ -25,6 +25,7 @@ export function asyncHandler(fn: RequestHandler): RequestHandler {
 
 export function errorHandler(err: unknown, _req: Request, res: Response, _next: NextFunction) {
   if (err instanceof ZodError) {
+    console.error('[api] Zod Error:', JSON.stringify(err.flatten()));
     return res.status(400).json({ error: 'Validação falhou', details: err.flatten() });
   }
   if (err instanceof AppError) {

@@ -11,7 +11,7 @@ const patientSchema = z.object({
   full_name: z.string().min(1),
   email: z.string().email().nullish().or(z.literal('')),
   phone: z.string().nullish(),
-  birth_date: z.string().nullish(),
+  birth_date: z.string().nullish().transform(v => v === '' ? null : v),
   gender: z.enum(['male', 'female', 'other', 'unspecified']).optional(),
   document: z.string().nullish(),
   address: z.string().nullish(),
@@ -52,15 +52,20 @@ patientsRouter.get('/', asyncHandler(async (req, res) => {
 patientsRouter.get('/:id', asyncHandler(async (req, res) => {
   const patient = await queryOne('select * from patients where id = $1', [req.params.id]);
   if (!patient) throw notFound('Paciente não encontrado');
-  const [treatments, consultations, notes, appointments, attachments] = await Promise.all([
+  const [treatments, stages, consultations, notes, appointments, attachments] = await Promise.all([
     query('select * from treatments where patient_id = $1 order by created_at desc', [req.params.id]),
+    query('select * from treatment_stages where treatment_id in (select id from treatments where patient_id = $1) order by order_index asc', [req.params.id]),
     query('select * from consultations where patient_id = $1 order by date desc, created_at desc', [req.params.id]),
     query('select n.*, p.full_name as author_name from patient_notes n left join profiles p on p.id = n.author_id where n.patient_id = $1 order by n.created_at desc', [req.params.id]),
     query(`select a.*, s.name as service_name, s.color as service_color
              from appointments a left join service_types s on s.id = a.service_type_id
-             where a.patient_id = $1 order by a.start_time desc limit 50`, [req.params.id]),
-    query("select * from attachments where entity_type = 'patient' and entity_id = $1 order by created_at desc", [req.params.id])
+             where a.patient_id = $1 order by a.start_time desc`, [req.params.id]),
+    query("select * from attachments where entity_type = 'patient' and entity_id = $1 order by created_at desc", [req.params.id]),
   ]);
+  
+  treatments.forEach((t: any) => {
+    t.stages = stages.filter((s: any) => s.treatment_id === t.id);
+  });
   
   // assinar urls
   const { signedUrl } = await import('../lib/supabase.js');
@@ -68,12 +73,19 @@ patientsRouter.get('/:id', asyncHandler(async (req, res) => {
     a.file_url = await signedUrl(a.file_path);
   }
 
-  res.json({ ...patient, treatments, consultations, notes, appointments, attachments });
+  res.json({ ...patient, treatments, consultations, timeline_notes: notes, appointments, attachments });
 }));
 
 // POST /patients
 patientsRouter.post('/', asyncHandler(async (req, res) => {
   const data = patientSchema.parse(req.body);
+  
+  // Se o paciente foi criado com um email, procura se ele já tem uma conta (profile)
+  if (data.email && !data.profile_id) {
+    const profile = await queryOne('select id from profiles where lower(email) = lower($1)', [data.email]);
+    if (profile) data.profile_id = profile.id;
+  }
+
   const values = COLS.map((c) => (data as any)[c] ?? (c === 'active' ? true : c === 'gender' ? 'unspecified' : null));
   const placeholders = COLS.map((_, i) => `$${i + 1}`).join(', ');
   const row = await queryOne(
@@ -86,6 +98,12 @@ patientsRouter.post('/', asyncHandler(async (req, res) => {
 // PUT /patients/:id
 patientsRouter.put('/:id', asyncHandler(async (req, res) => {
   const data = patientSchema.partial().parse(req.body);
+  
+  if (data.email && !data.profile_id) {
+    const profile = await queryOne('select id from profiles where lower(email) = lower($1)', [data.email]);
+    if (profile) data.profile_id = profile.id;
+  }
+
   const keys = Object.keys(data).filter((k) => (COLS as readonly string[]).includes(k));
   if (keys.length === 0) throw notFound('Nada para atualizar');
   const set = keys.map((k, i) => `${k} = $${i + 1}`).join(', ');

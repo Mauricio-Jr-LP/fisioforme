@@ -51,7 +51,7 @@ export default function Login() {
   };
 
   return (
-    <Center minH="100vh" bg="gray.50" px={4}>
+    <Center minH="100vh" bg="gray.50" _dark={{ bg: 'gray.900' }} px={4}>
       <Box w="full" maxW="420px">
         <Center mb={6} flexDir="column">
           <Flex boxSize={14} bg="brand.500" color="white" borderRadius="xl" align="center" justify="center" fontSize="2xl" fontWeight="bold" mb={3}>

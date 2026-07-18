@@ -1,4 +1,5 @@
-import { Routes, Route, Navigate } from 'react-router-dom';
+import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
+import { AnimatePresence } from 'framer-motion';
 import { useState, useEffect } from 'react';
 import { Center, Spinner, VStack, Text, Progress, Box } from '@chakra-ui/react';
 import { useAuth } from './context/AuthContext';
@@ -20,6 +21,8 @@ import SettingsPage from './pages/admin/SettingsPage';
 
 import PortalHome from './pages/portal/PortalHome';
 import PortalConsultations from './pages/portal/PortalConsultations';
+import PortalSettings from './pages/portal/PortalSettings';
+import PortalTreatmentDetail from './pages/portal/PortalTreatmentDetail';
 
 function FullscreenSpinner() {
   const [showProgress, setShowProgress] = useState(false);
@@ -73,46 +76,51 @@ function RequireAuth({ children }: { children: JSX.Element }) {
 }
 
 export default function App() {
+  const location = useLocation();
   return (
-    <Routes>
-      {/* Público */}
-      <Route path="/" element={<Landing />} />
-      <Route path="/agendar" element={<PublicBooking />} />
-      <Route path="/login" element={<Login />} />
+    <AnimatePresence mode="wait">
+      <Routes location={location} key={location.pathname}>
+        {/* Público */}
+        <Route path="/" element={<Landing />} />
+        <Route path="/agendar" element={<PublicBooking />} />
+        <Route path="/login" element={<Login />} />
 
-      {/* Área administrativa (staff) */}
-      <Route
-        path="/app"
-        element={
-          <RequireStaff>
-            <AdminLayout />
-          </RequireStaff>
-        }
-      >
-        <Route index element={<Dashboard />} />
-        <Route path="pacientes" element={<Patients />} />
-        <Route path="pacientes/:id" element={<PatientDetail />} />
-        <Route path="tratamentos/:id" element={<TreatmentDetail />} />
-        <Route path="agenda" element={<Agenda />} />
-        <Route path="servicos" element={<Services />} />
-        <Route path="disponibilidade" element={<Availability />} />
-        <Route path="config" element={<SettingsPage />} />
-      </Route>
+        {/* Área administrativa (staff) */}
+        <Route
+          path="/app"
+          element={
+            <RequireStaff>
+              <AdminLayout />
+            </RequireStaff>
+          }
+        >
+          <Route index element={<Dashboard />} />
+          <Route path="pacientes" element={<Patients />} />
+          <Route path="pacientes/:id" element={<PatientDetail />} />
+          <Route path="tratamentos/:id" element={<TreatmentDetail />} />
+          <Route path="agenda" element={<Agenda />} />
+          <Route path="servicos" element={<Services />} />
+          <Route path="disponibilidade" element={<Availability />} />
+          <Route path="config" element={<SettingsPage />} />
+        </Route>
 
-      {/* Portal do paciente */}
-      <Route
-        path="/portal"
-        element={
-          <RequireAuth>
-            <PortalLayout />
-          </RequireAuth>
-        }
-      >
-        <Route index element={<PortalHome />} />
-        <Route path="consultas" element={<PortalConsultations />} />
-      </Route>
+        {/* Portal do paciente */}
+        <Route
+          path="/portal"
+          element={
+            <RequireAuth>
+              <PortalLayout />
+            </RequireAuth>
+          }
+        >
+          <Route index element={<PortalHome />} />
+          <Route path="tratamentos/:id" element={<PortalTreatmentDetail />} />
+          <Route path="consultas" element={<PortalConsultations />} />
+          <Route path="config" element={<PortalSettings />} />
+        </Route>
 
-      <Route path="*" element={<Navigate to="/" replace />} />
-    </Routes>
+        <Route path="*" element={<Navigate to="/" replace />} />
+      </Routes>
+    </AnimatePresence>
   );
 }

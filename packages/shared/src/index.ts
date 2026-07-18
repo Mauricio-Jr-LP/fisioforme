@@ -7,7 +7,7 @@ export type ISODate = string; // YYYY-MM-DD
 export type ISODateTime = string; // full ISO timestamp
 export type TimeString = string; // HH:MM
 
-export type UserRole = 'admin' | 'therapist' | 'patient';
+export type UserRole = 'admin' | 'subadmin' | 'therapist' | 'patient';
 
 export interface Profile {
   id: UUID;

@@ -25,6 +25,7 @@ export function PortalLayout() {
   const tabs = [
     { to: '/portal', label: 'Minha ficha', icon: FiUser, end: true },
     { to: '/portal/consultas', label: 'Evoluções', icon: FiFileText },
+    { to: '/portal/config', label: 'Configurações', icon: FiUser },
   ];
 
   return (

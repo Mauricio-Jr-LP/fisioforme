@@ -93,7 +93,7 @@ function ServiceModal({ disc, editing, onSaved }: { disc: any; editing: ServiceT
   const close = () => { setForm({}); disc.onClose(); };
 
   return (
-    <Modal isOpen={disc.isOpen} onClose={close} size="lg">
+    <Modal isOpen={disc.isOpen} onClose={close} size={{ base: 'full', md: 'lg' }}>
       <ModalOverlay /><ModalContent>
         <ModalHeader>{editing ? 'Editar serviço' : 'Novo serviço'}</ModalHeader><ModalCloseButton />
         <ModalBody><Stack spacing={4}>

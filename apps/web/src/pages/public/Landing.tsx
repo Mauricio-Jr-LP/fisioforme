@@ -1,8 +1,8 @@
 import { Link as RouterLink } from 'react-router-dom';
 import {
-  Box, Button, Container, Flex, Heading, Text, SimpleGrid, Icon, HStack, Stack, Card, CardBody, Spacer, Link,
+  Box, Button, Container, Flex, Heading, Text, SimpleGrid, Icon, HStack, Stack, Card, CardBody, Spacer, Link, IconButton, useColorMode
 } from '@chakra-ui/react';
-import { FiCalendar, FiActivity, FiClock, FiHeart, FiCheckCircle } from 'react-icons/fi';
+import { FiCalendar, FiActivity, FiClock, FiHeart, FiCheckCircle, FiSun, FiMoon } from 'react-icons/fi';
 import { useQuery } from '@tanstack/react-query';
 import type { ServiceType } from '@fisioforme/shared';
 import { api } from '../../lib/api';
@@ -13,17 +13,19 @@ export default function Landing() {
     queryKey: ['public-services'],
     queryFn: () => api<ServiceType[]>('/service-types', { auth: false }),
   });
+  const { colorMode, toggleColorMode } = useColorMode();
 
   return (
     <Box>
       {/* Header */}
-      <Flex as="header" px={{ base: 4, md: 8 }} py={4} align="center" bg="white" borderBottom="1px solid" borderColor="gray.100">
+      <Flex as="header" px={{ base: 4, md: 8 }} py={4} align="center" bg="white" _dark={{ bg: 'gray.900', borderColor: 'gray.800' }} borderBottom="1px solid" borderColor="gray.100">
         <HStack spacing={3}>
           <Flex boxSize={9} bg="brand.500" color="white" borderRadius="lg" align="center" justify="center" fontWeight="bold">F</Flex>
           <Heading size="md">FisioForme</Heading>
         </HStack>
         <Spacer />
         <HStack>
+          <IconButton aria-label="Alterar tema" icon={colorMode === 'light' ? <FiMoon /> : <FiSun />} onClick={toggleColorMode} variant="ghost" size="sm" />
           <Link as={RouterLink} to="/login" fontWeight="medium" display={{ base: 'none', sm: 'block' }}>Entrar</Link>
           <Button as={RouterLink} to="/agendar" size="sm">Agendar</Button>
         </HStack>
@@ -61,7 +63,7 @@ export default function Landing() {
               <CardBody>
                 <Icon as={f.icon} boxSize={8} color="brand.500" mb={3} />
                 <Heading size="sm" mb={2}>{f.title}</Heading>
-                <Text color="gray.600" fontSize="sm">{f.desc}</Text>
+                <Text color="gray.600" _dark={{ color: 'gray.400' }} fontSize="sm">{f.desc}</Text>
               </CardBody>
             </Card>
           ))}
@@ -70,7 +72,7 @@ export default function Landing() {
 
       {/* Serviços */}
       {services && services.length > 0 && (
-        <Box bg="white" py={{ base: 10, md: 16 }}>
+        <Box bg="white" _dark={{ bg: 'gray.900' }} py={{ base: 10, md: 16 }}>
           <Container maxW="1100px" px={4}>
             <Heading size="lg" mb={2}>Nossos serviços</Heading>
             <Text color="gray.500" mb={8}>Escolha o atendimento ideal para você.</Text>
@@ -79,7 +81,7 @@ export default function Landing() {
                 <Card key={s.id} borderTop="4px solid" borderColor={s.color}>
                   <CardBody>
                     <Heading size="sm" mb={1}>{s.name}</Heading>
-                    {s.description && <Text fontSize="sm" color="gray.600" mb={3}>{s.description}</Text>}
+                    {s.description && <Text fontSize="sm" color="gray.600" _dark={{ color: 'gray.400' }} mb={3}>{s.description}</Text>}
                     <HStack justify="space-between" mt={2}>
                       <HStack color="gray.500" fontSize="sm"><Icon as={FiClock} /><Text>{s.duration_minutes} min</Text></HStack>
                       <Text fontWeight="bold" color="brand.600">{fmtMoney(s.price)}</Text>

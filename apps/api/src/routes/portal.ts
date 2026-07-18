@@ -1,8 +1,10 @@
 import { Router } from 'express';
+import { z } from 'zod';
 import { query, queryOne } from '../db/pool.js';
-import { asyncHandler, forbidden, notFound } from '../lib/http.js';
+import { asyncHandler, forbidden, notFound, badRequest } from '../lib/http.js';
 import { requireAuth } from '../middleware/auth.js';
 import { signedUrl } from '../lib/supabase.js';
+import { isSlotFree } from '../services/availability.js';
 
 // Portal do paciente — o usuário logado só acessa a própria ficha.
 export const portalRouter = Router();
@@ -50,8 +52,49 @@ portalRouter.get('/treatments/:id', asyncHandler(async (req, res) => {
   const pid = patientId(req);
   const t = await queryOne('select * from treatments where id = $1 and patient_id = $2', [req.params.id, pid]);
   if (!t) throw notFound('Tratamento não encontrado');
-  const stages = await query('select * from treatment_stages where treatment_id = $1 order by order_index', [req.params.id]);
-  res.json({ ...t, stages });
+  
+  const [stages, consultations] = await Promise.all([
+    query('select * from treatment_stages where treatment_id = $1 order by order_index', [req.params.id]),
+    query('select * from consultations where treatment_id = $1 order by date desc, created_at desc', [req.params.id]),
+  ]);
+  
+  for (const r of consultations) {
+    const atts = await query<any>("select * from attachments where entity_type = 'consultation' and entity_id = $1", [r.id]);
+    for (const a of atts) a.file_url = await signedUrl(a.file_path);
+    r.attachments = atts;
+  }
+  
+  res.json({ ...t, stages, consultations });
+}));
+
+// POST /portal/appointments
+portalRouter.post('/appointments', asyncHandler(async (req, res) => {
+  const pid = patientId(req);
+  const schema = z.object({
+    service_type_id: z.string().uuid(),
+    start_time: z.string(),
+    notes: z.string().nullish(),
+  });
+  const d = schema.parse(req.body);
+
+  const svc = await queryOne<{ duration_minutes: number }>(
+    'select duration_minutes from service_types where id = $1 and active = true',
+    [d.service_type_id]
+  );
+  if (!svc) throw badRequest('Serviço inválido');
+
+  const free = await isSlotFree(d.start_time, svc.duration_minutes);
+  if (!free) throw badRequest('Este horário acabou de ser reservado. Escolha outro.');
+
+  const end = new Date(new Date(d.start_time).getTime() + svc.duration_minutes * 60000).toISOString();
+  const row = await queryOne(
+    `insert into appointments
+       (patient_id, service_type_id, start_time, end_time, status, notes)
+     values ($1,$2,$3,$4,'pending',$5)
+     returning id, start_time, end_time, status`,
+    [pid, d.service_type_id, d.start_time, end, d.notes ?? null]
+  );
+  res.status(201).json(row);
 }));
 
 // PUT /portal/appointments/:id/cancel

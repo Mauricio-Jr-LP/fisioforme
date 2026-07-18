@@ -2,25 +2,29 @@ import { useState } from 'react';
 import { Link as RouterLink } from 'react-router-dom';
 import {
   Box, Button, Card, CardBody, Container, Flex, FormControl, FormLabel, Heading, HStack, Input,
-  Stack, Text, useToast, Icon, Link, Divider,
+  Stack, Text, useToast, Icon, Link, Divider, IconButton, useColorMode, Spacer
 } from '@chakra-ui/react';
-import { FiCheckCircle, FiArrowLeft } from 'react-icons/fi';
+import { FiCheckCircle, FiArrowLeft, FiSun, FiMoon } from 'react-icons/fi';
 import { useQuery } from '@tanstack/react-query';
 import type { TimeSlot } from '@fisioforme/shared';
 import { SlotPicker } from '../../components/SlotPicker';
 import { api } from '../../lib/api';
+import { useAuth } from '../../context/AuthContext';
 import { fmtDateTime } from '../../lib/format';
 
 export default function PublicBooking() {
   const toast = useToast();
+  const { session, profile } = useAuth();
+  
   const [slot, setSlot] = useState<TimeSlot | null>(null);
   const [serviceId, setServiceId] = useState('');
-  const [name, setName] = useState('');
-  const [email, setEmail] = useState('');
+  const [name, setName] = useState(profile?.full_name || '');
+  const [email, setEmail] = useState(session?.user?.email || '');
   const [phone, setPhone] = useState('');
   const [notes, setNotes] = useState('');
   const [busy, setBusy] = useState(false);
   const [done, setDone] = useState(false);
+  const { colorMode, toggleColorMode } = useColorMode();
 
   const { data: services } = useQuery({
     queryKey: ['services', true],
@@ -67,15 +71,15 @@ export default function PublicBooking() {
                 Para confirmar seu agendamento para <b>{fmtDateTime(slot?.start)}</b>, é necessário realizar o pagamento de 30% do valor do serviço como sinal.
               </Text>
               
-              <Box bg="gray.50" p={4} borderRadius="md" mb={6} borderWidth={1}>
-                <Text fontSize="sm" color="gray.500" mb={1}>Valor do sinal (30%)</Text>
+              <Box bg="gray.50" _dark={{ bg: 'gray.700', borderColor: 'gray.600' }} p={4} borderRadius="md" mb={6} borderWidth={1}>
+                <Text fontSize="sm" color="gray.500" _dark={{ color: 'gray.400' }} mb={1}>Valor do sinal (30%)</Text>
                 <Heading size="lg" color="brand.600" mb={4}>
                   {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(prepayValue)}
                 </Heading>
                 
                 <FormControl mb={2}>
                   <FormLabel fontSize="sm" textAlign="center">Chave Pix</FormLabel>
-                  <Input value={pixKey} isReadOnly textAlign="center" bg="white" />
+                  <Input value={pixKey} isReadOnly textAlign="center" bg="white" _dark={{ bg: 'gray.800' }} />
                 </FormControl>
                 <Text fontSize="xs" color="gray.400">
                   Transfira o valor acima e envie o comprovante para o nosso WhatsApp informando seu nome ({name}).
@@ -107,11 +111,15 @@ export default function PublicBooking() {
   }
 
   return (
-    <Box bg="gray.50" minH="100vh">
+    <Box bg="gray.50" _dark={{ bg: 'gray.900' }} minH="100vh">
       <Container maxW="640px" py={{ base: 6, md: 10 }} px={4}>
-        <Link as={RouterLink} to="/" color="gray.500" mb={4} display="inline-flex" alignItems="center">
-          <Icon as={FiArrowLeft} mr={1} /> Início
-        </Link>
+        <Flex mb={4} align="center">
+          <Link as={RouterLink} to="/" color="gray.500" display="inline-flex" alignItems="center">
+            <Icon as={FiArrowLeft} mr={1} /> Início
+          </Link>
+          <Spacer />
+          <IconButton aria-label="Alterar tema" icon={colorMode === 'light' ? <FiMoon /> : <FiSun />} onClick={toggleColorMode} variant="ghost" size="sm" />
+        </Flex>
         <Heading size="lg" mb={1}>Agende sua consulta</Heading>
         <Text color="gray.500" mb={6}>Escolha o serviço, o horário e informe seus dados de contato.</Text>
 

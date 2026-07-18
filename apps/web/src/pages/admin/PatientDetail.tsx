@@ -10,7 +10,7 @@ import {
   FiArrowLeft, FiEdit2, FiPlus, FiActivity, FiFileText, FiMessageSquare, FiCalendar, FiTrash2, FiImage, FiSave, FiShield,
 } from 'react-icons/fi';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import type { Patient, Treatment, Consultation, PatientNote, Appointment } from '@fisioforme/shared';
+import type { Patient, Treatment, Consultation, PatientNote, Appointment, TreatmentStage } from '@fisioforme/shared';
 import { api } from '../../lib/api';
 import { uploadAttachment } from '../../lib/upload';
 import { Loading, TreatmentStatusBadge, AppointmentStatusBadge, EmptyState, WhatsAppLink } from '../../components/ui';
@@ -19,9 +19,9 @@ import { fmtDate, fmtDateTime, ageFrom } from '../../lib/format';
 import { useAuth } from '../../context/AuthContext';
 
 type FullPatient = Patient & {
-  treatments: Treatment[];
+  treatments: (Treatment & { stages?: TreatmentStage[] })[];
   consultations: Consultation[];
-  notes: (PatientNote & { author_name?: string })[];
+  timeline_notes: (PatientNote & { author_name?: string })[];
   appointments: (Appointment & { service_name?: string; service_color?: string })[];
   attachments?: any[];
 };
@@ -40,12 +40,6 @@ export default function PatientDetail() {
   const { isStaff, profile } = useAuth();
   const isAdmin = profile?.role === 'admin';
 
-  const promoteMut = useMutation({
-    mutationFn: () => api(`/settings/staff/${data?.profile_id}/promote`, { method: 'PUT' }),
-    onSuccess: () => { toast({ status: 'success', title: 'Usuário promovido a equipe' }); qc.invalidateQueries({ queryKey: ['patient', id] }); },
-    onError: (e: any) => toast({ status: 'error', title: 'Erro', description: e.message }),
-  });
-
   const editDisc = useDisclosure();
   const treatDisc = useDisclosure();
   const consultDisc = useDisclosure();
@@ -63,38 +57,35 @@ export default function PatientDetail() {
       <Card mb={4}>
         <CardBody>
           <Flex direction={{ base: 'column', md: 'row' }} gap={4} align={{ md: 'center' }}>
-            <HStack>
+            <HStack minW={0} flex={1}>
               <Avatar size="lg" name={data.full_name} bg="brand.500" color="white" />
-              <Box>
-                <Heading size="md">{data.full_name}</Heading>
-                <Text color="gray.500" fontSize="sm">
+              <Box minW={0}>
+                <Heading size="md" noOfLines={2}>{data.full_name}</Heading>
+                <Text color="gray.500" fontSize="sm" noOfLines={1}>
                   {ageFrom(data.birth_date)} {data.phone ? `· ${data.phone}` : ''}
                 </Text>
-                {data.main_complaint && <Badge mt={1} colorScheme="brand">{data.main_complaint}</Badge>}
+                {data.main_complaint && (
+                  <Box display="inline-block" mt={1} px={2} py={0.5} bg="brand.100" color="brand.700" _dark={{ bg: 'brand.900', color: 'brand.200' }} borderRadius="md" fontSize="xs" fontWeight="bold" whiteSpace="normal" wordBreak="break-word" maxW="100%">
+                    {data.main_complaint}
+                  </Box>
+                )}
               </Box>
             </HStack>
             <Button ml={{ md: 'auto' }} leftIcon={<FiEdit2 />} variant="outline" onClick={editDisc.onOpen} w={{ base: 'full', md: 'auto' }}>
               Editar dados
             </Button>
-            {isAdmin && data.profile_id && (
-              <Button leftIcon={<FiShield />} variant="ghost" colorScheme="purple" onClick={() => promoteMut.mutate()} isLoading={promoteMut.isPending}>
-                Tornar Equipe
-              </Button>
-            )}
           </Flex>
         </CardBody>
       </Card>
 
       <Tabs colorScheme="brand" variant="soft-rounded" isLazy>
-        <Box overflowX="auto">
-          <TabList>
-            <Tab><Icon as={FiFileText} mr={2} />Prontuário</Tab>
-            <Tab><Icon as={FiActivity} mr={2} />Tratamentos</Tab>
-            <Tab><Icon as={FiMessageSquare} mr={2} />Evoluções</Tab>
-            <Tab><Icon as={FiFileText} mr={2} />Documentos</Tab>
-            <Tab><Icon as={FiCalendar} mr={2} />Agenda</Tab>
-          </TabList>
-        </Box>
+        <TabList overflowX="auto" overflowY="hidden" pb={1} sx={{ scrollbarWidth: 'none', '::-webkit-scrollbar': { display: 'none' } }}>
+          <Tab whiteSpace="nowrap"><Icon as={FiFileText} mr={2} />Prontuário</Tab>
+          <Tab whiteSpace="nowrap"><Icon as={FiActivity} mr={2} />Tratamentos</Tab>
+          <Tab whiteSpace="nowrap"><Icon as={FiMessageSquare} mr={2} />Evoluções</Tab>
+          <Tab whiteSpace="nowrap"><Icon as={FiFileText} mr={2} />Documentos</Tab>
+          <Tab whiteSpace="nowrap"><Icon as={FiCalendar} mr={2} />Agenda</Tab>
+        </TabList>
 
         <TabPanels>
           {/* Prontuário / anamnese */}
@@ -123,11 +114,11 @@ export default function PatientDetail() {
                   <Heading size="sm">Anotações</Heading>
                   <Button size="xs" ml="auto" leftIcon={<FiPlus />} onClick={noteDisc.onOpen}>Nova</Button>
                 </HStack>
-                {data.notes.length === 0 ? (
+                {data.timeline_notes.length === 0 ? (
                   <Text color="gray.400" fontSize="sm">Sem anotações.</Text>
                 ) : (
                   <Stack divider={<Divider />} spacing={3}>
-                    {data.notes.map((n) => (
+                    {data.timeline_notes.map((n) => (
                       <Box key={n.id}>
                         <HStack justify="space-between">
                           <Text fontWeight="medium">{n.title || 'Anotação'}</Text>
@@ -254,13 +245,13 @@ export default function PatientDetail() {
 }
 
 function InfoCard({ title, children }: { title: string; children: React.ReactNode }) {
-  return <Card><CardBody><Heading size="sm" mb={3}>{title}</Heading><Stack spacing={2}>{children}</Stack></CardBody></Card>;
+  return <Card w="full" overflow="hidden"><CardBody w="full"><Heading size="sm" mb={3}>{title}</Heading><Stack spacing={2} w="full">{children}</Stack></CardBody></Card>;
 }
 function InfoRow({ label, value }: { label: string; value?: string | React.ReactNode | null }) {
   return (
-    <HStack align="start" spacing={3}>
-      <Text fontSize="sm" color="gray.500" minW="140px">{label}</Text>
-      <Box fontSize="sm" whiteSpace="pre-wrap">{value || '—'}</Box>
+    <HStack align="start" spacing={3} w="full">
+      <Text fontSize="sm" color="gray.500" w={{ base: '100px', md: '140px' }} flexShrink={0}>{label}</Text>
+      <Box fontSize="sm" flex={1} minW={0} whiteSpace="pre-wrap" wordBreak="break-word">{value || '—'}</Box>
     </HStack>
   );
 }
@@ -338,7 +329,7 @@ function EditPatientModal({ patient, disc, onSaved }: { patient: Patient; disc: 
     onError: (e: any) => toast({ status: 'error', title: 'Erro', description: e.message }),
   });
   return (
-    <Modal isOpen={disc.isOpen} onClose={disc.onClose} size="2xl" scrollBehavior="inside">
+    <Modal isOpen={disc.isOpen} onClose={disc.onClose} size={{ base: 'full', md: '2xl' }} scrollBehavior="inside">
       <ModalOverlay /><ModalContent>
         <ModalHeader>Editar paciente</ModalHeader><ModalCloseButton />
         <ModalBody>
@@ -390,7 +381,7 @@ function NewTreatmentModal({ patientId, disc, onSaved }: { patientId: string; di
     onError: (e: any) => toast({ status: 'error', title: 'Erro', description: e.message }),
   });
   return (
-    <Modal isOpen={disc.isOpen} onClose={disc.onClose} size="lg">
+    <Modal isOpen={disc.isOpen} onClose={disc.onClose} size={{ base: 'full', md: 'lg' }}>
       <ModalOverlay /><ModalContent>
         <ModalHeader>Novo tratamento / Pacote</ModalHeader><ModalCloseButton />
         <ModalBody><Stack spacing={4}>
@@ -417,38 +408,50 @@ function NewTreatmentModal({ patientId, disc, onSaved }: { patientId: string; di
 function NewConsultationModal({ patient, disc, onSaved }: { patient: FullPatient; disc: any; onSaved: () => void }) {
   const toast = useToast();
   const today = new Date().toISOString().slice(0, 10);
-  const [form, setForm] = useState<any>({ date: today, treatment_id: '', pain_level: '', subjective: '', objective: '', assessment: '', plan: '' });
+  const [form, setForm] = useState<any>({ date: today, treatment_stage_combo: '', pain_level: '', subjective: '', objective: '', assessment: '', plan: '' });
   const set = (k: string, v: any) => setForm((f: any) => ({ ...f, [k]: v }));
+  
   const mut = useMutation({
-    mutationFn: () => api<Consultation>('/consultations', {
-      method: 'POST',
-      body: {
-        patient_id: patient.id, date: form.date,
-        treatment_id: form.treatment_id || null,
-        pain_level: form.pain_level === '' ? null : (parseInt(form.pain_level) || 0),
-        subjective: form.subjective || null, objective: form.objective || null,
-        assessment: form.assessment || null, plan: form.plan || null,
-      },
-    }),
+    mutationFn: () => {
+      const [tId, sId] = (form.treatment_stage_combo || '').split('|');
+      return api<Consultation>('/consultations', {
+        method: 'POST',
+        body: {
+          patient_id: patient.id, date: form.date,
+          treatment_id: tId || null,
+          stage_id: sId || null,
+          pain_level: form.pain_level === '' ? null : (parseInt(form.pain_level) || 0),
+          subjective: form.subjective || null, objective: form.objective || null,
+          assessment: form.assessment || null, plan: form.plan || null,
+        },
+      });
+    },
     onSuccess: () => { toast({ status: 'success', title: 'Evolução registrada' }); disc.onClose(); onSaved(); },
     onError: (e: any) => toast({ status: 'error', title: 'Erro', description: e.message }),
   });
   return (
-    <Modal isOpen={disc.isOpen} onClose={disc.onClose} size="2xl" scrollBehavior="inside">
+    <Modal isOpen={disc.isOpen} onClose={disc.onClose} size={{ base: 'full', md: '2xl' }} scrollBehavior="inside">
       <ModalOverlay /><ModalContent>
         <ModalHeader>Nova evolução (SOAP)</ModalHeader><ModalCloseButton />
         <ModalBody><Stack spacing={4}>
-          <SimpleGrid columns={{ base: 1, sm: 3 }} spacing={4}>
+          <SimpleGrid columns={{ base: 1, sm: 2 }} spacing={4}>
             <FormControl isRequired><FormLabel>Data</FormLabel><Input type="date" value={form.date} onChange={(e) => set('date', e.target.value)} /></FormControl>
-            <FormControl><FormLabel>Tratamento</FormLabel>
-              <Select placeholder="Nenhum" value={form.treatment_id} onChange={(e) => set('treatment_id', e.target.value)}>
-                {patient.treatments.map((t) => <option key={t.id} value={t.id}>{t.title}</option>)}
-              </Select>
-            </FormControl>
             <FormControl><FormLabel>Dor (EVA 0-10)</FormLabel>
               <NumberInput min={0} max={10} value={form.pain_level} onChange={(v) => set('pain_level', v)}><NumberInputField /></NumberInput>
             </FormControl>
           </SimpleGrid>
+          <FormControl><FormLabel>Vincular a Tratamento/Etapa</FormLabel>
+            <Select placeholder="Geral / Nenhum" value={form.treatment_stage_combo} onChange={(e) => set('treatment_stage_combo', e.target.value)}>
+              {patient.treatments.map((t) => (
+                <optgroup key={t.id} label={t.title}>
+                  <option value={`${t.id}|`}>Geral (Sem etapa)</option>
+                  {t.stages?.map((s) => (
+                    <option key={s.id} value={`${t.id}|${s.id}`}>↳ {s.title}</option>
+                  ))}
+                </optgroup>
+              ))}
+            </Select>
+          </FormControl>
           <FormControl><FormLabel>S — Subjetivo (relato do paciente)</FormLabel><Textarea value={form.subjective} onChange={(e) => set('subjective', e.target.value)} /></FormControl>
           <FormControl><FormLabel>O — Objetivo (avaliação física)</FormLabel><Textarea value={form.objective} onChange={(e) => set('objective', e.target.value)} /></FormControl>
           <FormControl><FormLabel>A — Avaliação</FormLabel><Textarea value={form.assessment} onChange={(e) => set('assessment', e.target.value)} /></FormControl>
@@ -471,7 +474,7 @@ function NewNoteModal({ patientId, disc, onSaved }: { patientId: string; disc: a
     onError: (e: any) => toast({ status: 'error', title: 'Erro', description: e.message }),
   });
   return (
-    <Modal isOpen={disc.isOpen} onClose={disc.onClose}>
+    <Modal isOpen={disc.isOpen} onClose={disc.onClose} size={{ base: 'full', md: 'md' }}>
       <ModalOverlay /><ModalContent>
         <ModalHeader>Nova anotação</ModalHeader><ModalCloseButton />
         <ModalBody><Stack spacing={4}>

@@ -1,6 +1,8 @@
 import type { ReactNode } from 'react';
+import { useRef } from 'react';
 import {
-  Box, Flex, Heading, Text, HStack, Icon, Badge, Card, CardBody, Center, Spinner, Link
+  Box, Flex, Heading, Text, HStack, Icon, Badge, Card, CardBody, Center, Spinner, Link,
+  AlertDialog, AlertDialogBody, AlertDialogFooter, AlertDialogHeader, AlertDialogContent, AlertDialogOverlay, Button
 } from '@chakra-ui/react';
 import { FiMessageCircle } from 'react-icons/fi';
 import type { IconType } from 'react-icons';
@@ -78,5 +80,46 @@ export function WhatsAppLink({ phone }: { phone?: string | null }) {
     <Link href={`https://wa.me/55${clean}`} isExternal color="brand.500" display="inline-flex" alignItems="center">
       {phone} <Icon as={FiMessageCircle} ml={1} />
     </Link>
+  );
+}
+
+export function ConfirmDialog({
+  isOpen,
+  onClose,
+  onConfirm,
+  title = 'Confirmar ação',
+  description = 'Tem certeza que deseja realizar esta ação?',
+  confirmText = 'Confirmar',
+  cancelText = 'Cancelar',
+  colorScheme = 'red',
+  isLoading = false,
+}: {
+  isOpen: boolean;
+  onClose: () => void;
+  onConfirm: () => void;
+  title?: string;
+  description?: string;
+  confirmText?: string;
+  cancelText?: string;
+  colorScheme?: string;
+  isLoading?: boolean;
+}) {
+  const cancelRef = useRef<HTMLButtonElement>(null);
+
+  return (
+    <AlertDialog isOpen={isOpen} leastDestructiveRef={cancelRef} onClose={onClose}>
+      <AlertDialogOverlay>
+        <AlertDialogContent>
+          <AlertDialogHeader fontSize="lg" fontWeight="bold">{title}</AlertDialogHeader>
+          <AlertDialogBody>{description}</AlertDialogBody>
+          <AlertDialogFooter>
+            <Button ref={cancelRef} onClick={onClose} isDisabled={isLoading}>{cancelText}</Button>
+            <Button colorScheme={colorScheme} onClick={onConfirm} ml={3} isLoading={isLoading}>
+              {confirmText}
+            </Button>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialogOverlay>
+    </AlertDialog>
   );
 }

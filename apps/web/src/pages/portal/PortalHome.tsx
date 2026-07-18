@@ -1,7 +1,7 @@
 import { useState, type ReactNode } from 'react';
 import { Link as RouterLink } from 'react-router-dom';
 import {
-  Box, Card, CardBody, Heading, Text, Stack, HStack, Badge, Icon, SimpleGrid, Divider, Button, Alert, AlertIcon, FormControl, FormLabel, Input, useToast, IconButton, Tooltip, useDisclosure, Modal, ModalOverlay, ModalContent, ModalHeader, ModalBody, ModalFooter, ModalCloseButton
+  Box, Card, CardBody, Heading, Text, Stack, HStack, Badge, Icon, SimpleGrid, Divider, Button, Alert, AlertIcon, FormControl, FormLabel, Input, useToast, IconButton, Tooltip, useDisclosure, Modal, ModalOverlay, ModalContent, ModalHeader, ModalBody, ModalFooter, ModalCloseButton, Flex
 } from '@chakra-ui/react';
 import { FiCalendar, FiActivity, FiPlus, FiUser, FiX } from 'react-icons/fi';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
@@ -11,6 +11,7 @@ import { supabase } from '../../lib/supabase';
 import { Loading, AppointmentStatusBadge, TreatmentStatusBadge, EmptyState, WhatsAppLink } from '../../components/ui';
 import { fmtDate, fmtDateTime, ageFrom } from '../../lib/format';
 import { useAuth } from '../../context/AuthContext';
+import { PortalBookingModal } from './PortalBookingModal';
 
 interface PortalMe { patient: Patient; treatments: Treatment[]; appointments: (Appointment & { service_type?: any })[] }
 
@@ -27,7 +28,7 @@ function CancelAppointmentModal({ appointment, disc, onSaved }: { appointment: A
   });
   if (!appointment) return null;
   return (
-    <Modal isOpen={disc.isOpen} onClose={disc.onClose}>
+    <Modal isOpen={disc.isOpen} onClose={disc.onClose} size={{ base: 'full', md: 'md' }}>
       <ModalOverlay />
       <ModalContent>
         <ModalHeader>Cancelar Agendamento</ModalHeader>
@@ -52,6 +53,7 @@ export default function PortalHome() {
   const toast = useToast();
   const qc = useQueryClient();
   const { profile } = useAuth();
+  const bookingDisc = useDisclosure();
   const { data, isLoading, error, refetch } = useQuery({
     queryKey: ['portal-me'],
     queryFn: () => api<PortalMe>('/portal/me'),
@@ -81,29 +83,6 @@ export default function PortalHome() {
   const { patient, treatments, appointments } = data;
   const upcoming = appointments.filter((a) => new Date(a.start_time) >= new Date() && a.status !== 'cancelled');
 
-  const [profileForm, setProfileForm] = useState({ full_name: profile?.full_name || '', password: '' });
-  const [isSaving, setIsSaving] = useState(false);
-
-  const handleSaveProfile = async () => {
-    setIsSaving(true);
-    try {
-      if (profileForm.full_name !== profile?.full_name) {
-        await api('/auth/me', { method: 'PUT', body: { full_name: profileForm.full_name } });
-      }
-      if (profileForm.password) {
-        const { error } = await supabase.auth.updateUser({ password: profileForm.password });
-        if (error) throw error;
-      }
-      toast({ status: 'success', title: 'Perfil atualizado' });
-      setProfileForm(f => ({ ...f, password: '' }));
-      refetch();
-    } catch (e: any) {
-      toast({ status: 'error', title: 'Erro ao atualizar perfil', description: e.message });
-    } finally {
-      setIsSaving(false);
-    }
-  };
-
   return (
     <Stack spacing={5}>
       <Card>
@@ -121,10 +100,17 @@ export default function PortalHome() {
       </Card>
 
       <Box>
-        <Heading size="sm" mb={3}><Icon as={FiCalendar} mr={2} />Próximos agendamentos</Heading>
+        <Flex justify="space-between" align="center" mb={3}>
+          <Heading size="sm"><Icon as={FiCalendar} mr={2} />Próximos agendamentos</Heading>
+          {upcoming.length > 0 && (
+            <Button onClick={bookingDisc.onOpen} size="sm" colorScheme="brand" variant="outline">
+              Nova Consulta
+            </Button>
+          )}
+        </Flex>
         {upcoming.length === 0 ? (
           <Card><CardBody><EmptyState icon={FiCalendar} title="Nenhum agendamento futuro"
-            action={<Button as={RouterLink} to="/agendar" size="sm">Agendar</Button>} /></CardBody></Card>
+            action={<Button onClick={bookingDisc.onOpen} size="sm">Agendar</Button>} /></CardBody></Card>
         ) : (
           <Stack spacing={2}>
             {upcoming.map((a) => (
@@ -133,9 +119,11 @@ export default function PortalHome() {
                   <Box w="4px" h="36px" borderRadius="full" bg={a.service_type?.color || 'gray.300'} />
                   <Box flex="1"><Text fontWeight="medium">{a.service_type?.name || 'Consulta'}</Text><Text fontSize="sm" color="gray.500">{fmtDateTime(a.start_time)}</Text></Box>
                   <AppointmentStatusBadge status={a.status} />
-                  <Tooltip label="Cancelar agendamento">
-                    <IconButton aria-label="Cancelar" icon={<FiX />} size="sm" variant="ghost" colorScheme="red" onClick={() => { setSelectedAppt(a); cancelDisc.onOpen(); }} />
-                  </Tooltip>
+                  {['pending', 'confirmed'].includes(a.status) && (
+                    <Tooltip label="Cancelar agendamento">
+                      <IconButton aria-label="Cancelar" icon={<FiX />} size="sm" variant="ghost" colorScheme="red" onClick={() => { setSelectedAppt(a); cancelDisc.onOpen(); }} />
+                    </Tooltip>
+                  )}
                 </HStack>
               </CardBody></Card>
             ))}
@@ -152,7 +140,7 @@ export default function PortalHome() {
         ) : (
           <Stack spacing={2}>
             {treatments.map((t) => (
-              <Card key={t.id}><CardBody py={3}>
+              <Card key={t.id} as={RouterLink} to={`/portal/tratamentos/${t.id}`} _hover={{ shadow: 'md', cursor: 'pointer', transform: 'translateY(-2px)' }} transition="all 0.2s"><CardBody py={3}>
                 <HStack><Text fontWeight="medium">{t.title}</Text><TreatmentStatusBadge status={t.status} /></HStack>
                 {t.diagnosis && <Text fontSize="sm" color="gray.500">{t.diagnosis}</Text>}
                 <Text fontSize="xs" color="gray.400">Início: {fmtDate(t.start_date)}</Text>
@@ -162,24 +150,7 @@ export default function PortalHome() {
         )}
       </Box>
 
-      <Box>
-        <Heading size="sm" mb={3}><Icon as={FiUser} mr={2} />Meu Perfil</Heading>
-        <Card>
-          <CardBody>
-            <Stack spacing={4} maxW="400px">
-              <FormControl>
-                <FormLabel>Nome Completo</FormLabel>
-                <Input value={profileForm.full_name} onChange={(e) => setProfileForm(f => ({ ...f, full_name: e.target.value }))} />
-              </FormControl>
-              <FormControl>
-                <FormLabel>Nova Senha</FormLabel>
-                <Input type="password" value={profileForm.password} onChange={(e) => setProfileForm(f => ({ ...f, password: e.target.value }))} placeholder="Deixe em branco para manter" />
-              </FormControl>
-              <Button onClick={handleSaveProfile} isLoading={isSaving} isDisabled={!profileForm.full_name} w="fit-content">Salvar Perfil</Button>
-            </Stack>
-          </CardBody>
-        </Card>
-      </Box>
+      <PortalBookingModal isOpen={bookingDisc.isOpen} onClose={bookingDisc.onClose} />
     </Stack>
   );
 }

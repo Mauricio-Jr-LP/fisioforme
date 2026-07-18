@@ -101,7 +101,7 @@ export function AdminLayout() {
         </DrawerContent>
       </Drawer>
 
-      <Box flex="1" ml={{ base: 0, lg: '260px' }}>
+      <Box flex="1" minW={0} ml={{ base: 0, lg: '260px' }}>
         {/* Topbar */}
         <Flex as="header" bg={useColorModeValue('white', 'gray.800')} borderBottom="1px solid" borderColor={useColorModeValue('gray.200', 'gray.700')} px={4} py={3} align="center" position="sticky" top={0} zIndex={10}>
           {!isDesktop && (

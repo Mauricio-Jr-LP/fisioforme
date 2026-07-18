@@ -68,13 +68,31 @@ export default function Agenda() {
           {data.map((a) => (
             <Card key={a.id} borderLeft="4px solid" borderColor={a.service_type?.color || 'gray.300'}>
               <CardBody>
-                <Flex gap={3} align="center">
-                  <Box textAlign="center" minW="56px">
-                    <Text fontWeight="bold" fontSize="lg">{fmtTime(a.start_time)}</Text>
-                    <Text fontSize="xs" color="gray.400">{fmtTime(a.end_time)}</Text>
-                  </Box>
-                  <Divider orientation="vertical" h="40px" />
-                  <Box flex="1" minW={0}>
+                <Flex direction={{ base: 'column', md: 'row' }} gap={{ base: 2, md: 3 }} align={{ base: 'flex-start', md: 'center' }}>
+                  <HStack w={{ base: 'full', md: 'auto' }}>
+                    <Box textAlign="center" minW="56px">
+                      <Text fontWeight="bold" fontSize="lg">{fmtTime(a.start_time)}</Text>
+                      <Text fontSize="xs" color="gray.400">{fmtTime(a.end_time)}</Text>
+                    </Box>
+                    <Divider orientation="vertical" h="40px" display={{ base: 'none', md: 'block' }} />
+                    <Spacer display={{ base: 'block', md: 'none' }} />
+                    <Box display={{ base: 'block', md: 'none' }}>
+                      <Menu>
+                        <MenuButton as={IconButton} icon={<FiMoreVertical />} variant="ghost" size="sm" aria-label="Ações" />
+                        <MenuList>
+                          {(Object.keys(APPOINTMENT_STATUS_LABELS) as AppointmentStatus[]).map((s) => (
+                            <MenuItem key={s} onClick={() => statusMut.mutate({ id: a.id, status: s })}>
+                              Marcar como {APPOINTMENT_STATUS_LABELS[s]}
+                            </MenuItem>
+                          ))}
+                          <Divider />
+                          <MenuItem color="red.500" onClick={() => delMut.mutate(a.id)}>Excluir</MenuItem>
+                        </MenuList>
+                      </Menu>
+                    </Box>
+                  </HStack>
+                  
+                  <Box flex="1" minW={0} mt={{ base: 2, md: 0 }}>
                     <HStack>
                       <Text fontWeight="semibold" noOfLines={1}>
                         {a.patient?.full_name || a.guest_name || 'Sem paciente'}
@@ -86,19 +104,25 @@ export default function Agenda() {
                       <HStack fontSize="xs" color="gray.400" mt={1}><Icon as={FiPhone} /><Text>{a.guest_phone || a.patient?.phone}</Text></HStack>
                     )}
                   </Box>
-                  <AppointmentStatusBadge status={a.status} />
-                  <Menu>
-                    <MenuButton as={IconButton} icon={<FiMoreVertical />} variant="ghost" size="sm" aria-label="Ações" />
-                    <MenuList>
-                      {(Object.keys(APPOINTMENT_STATUS_LABELS) as AppointmentStatus[]).map((s) => (
-                        <MenuItem key={s} onClick={() => statusMut.mutate({ id: a.id, status: s })}>
-                          Marcar como {APPOINTMENT_STATUS_LABELS[s]}
-                        </MenuItem>
-                      ))}
-                      <Divider />
-                      <MenuItem color="red.500" onClick={() => delMut.mutate(a.id)}>Excluir</MenuItem>
-                    </MenuList>
-                  </Menu>
+                  
+                  <HStack mt={{ base: 2, md: 0 }} w={{ base: 'full', md: 'auto' }} justify={{ base: 'flex-start', md: 'flex-end' }}>
+                    <AppointmentStatusBadge status={a.status} />
+                  </HStack>
+                  
+                  <Box display={{ base: 'none', md: 'block' }}>
+                    <Menu>
+                      <MenuButton as={IconButton} icon={<FiMoreVertical />} variant="ghost" size="sm" aria-label="Ações" />
+                      <MenuList>
+                        {(Object.keys(APPOINTMENT_STATUS_LABELS) as AppointmentStatus[]).map((s) => (
+                          <MenuItem key={s} onClick={() => statusMut.mutate({ id: a.id, status: s })}>
+                            Marcar como {APPOINTMENT_STATUS_LABELS[s]}
+                          </MenuItem>
+                        ))}
+                        <Divider />
+                        <MenuItem color="red.500" onClick={() => delMut.mutate(a.id)}>Excluir</MenuItem>
+                      </MenuList>
+                    </Menu>
+                  </Box>
                 </Flex>
               </CardBody>
             </Card>
@@ -136,7 +160,7 @@ function NewAppointmentModal({ disc, onSaved }: { disc: any; onSaved: () => void
   const reset = () => { setPatientId(''); setSlot(null); setServiceId(''); setNotes(''); };
 
   return (
-    <Modal isOpen={disc.isOpen} onClose={() => { reset(); disc.onClose(); }} size="xl" scrollBehavior="inside">
+    <Modal isOpen={disc.isOpen} onClose={() => { reset(); disc.onClose(); }} size={{ base: 'full', md: 'xl' }} scrollBehavior="inside">
       <ModalOverlay /><ModalContent>
         <ModalHeader>Novo agendamento</ModalHeader><ModalCloseButton />
         <ModalBody>

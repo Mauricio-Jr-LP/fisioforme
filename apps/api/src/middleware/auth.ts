@@ -62,7 +62,7 @@ export function requireAuth(req: Request, _res: Response, next: NextFunction) {
 /** Exige papel admin ou therapist. */
 export function requireStaff(req: Request, _res: Response, next: NextFunction) {
   if (!req.user) throw unauthorized();
-  if (req.user.role !== 'admin' && req.user.role !== 'therapist') throw forbidden();
+  if (req.user.role !== 'admin' && req.user.role !== 'subadmin' && req.user.role !== 'therapist') throw forbidden();
   next();
 }
 

@@ -24,13 +24,24 @@ settingsRouter.put('/', requireStaff, asyncHandler(async (req, res) => {
 
 // Lista de terapeutas (para atribuição)
 settingsRouter.get('/staff', requireStaff, asyncHandler(async (_req, res) => {
-  const rows = await query("select id, full_name, role, email from profiles where role in ('admin','therapist') order by full_name");
+  const rows = await query("select id, full_name, role, email from profiles where role::text in ('admin','subadmin','therapist') order by full_name");
   res.json(rows);
 }));
 
-settingsRouter.put('/staff/:id/promote', requireAdmin, asyncHandler(async (req, res) => {
-  const row = await queryOne(`update profiles set role = 'therapist' where id = $1 returning *`, [req.params.id]);
+settingsRouter.put('/staff/:id/role', requireAdmin, asyncHandler(async (req, res) => {
+  const { role } = z.object({ role: z.enum(['admin', 'subadmin', 'therapist', 'patient']) }).parse(req.body);
+  const row = await queryOne(`update profiles set role = $1::text::user_role where id = $2 returning *`, [role, req.params.id]);
   if (!row) throw notFound('Usuário não encontrado');
+  res.json(row);
+}));
+
+settingsRouter.put('/staff/promote-email', requireAdmin, asyncHandler(async (req, res) => {
+  const { email, role } = z.object({ 
+    email: z.string().email(), 
+    role: z.enum(['admin', 'subadmin', 'therapist']) 
+  }).parse(req.body);
+  const row = await queryOne(`update profiles set role = $1::text::user_role where lower(email) = lower($2) returning *`, [role, email]);
+  if (!row) throw notFound('Nenhuma conta encontrada com este e-mail');
   res.json(row);
 }));
 
